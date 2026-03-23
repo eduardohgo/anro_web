@@ -24,3 +24,11 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+.input-base {
+  @apply w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[#d4a62a] focus:bg-white;
+}
+
+.input-error {
+  @apply border-rose-300 bg-rose-50 focus:border-rose-400;
+}
