@@ -57,13 +57,3 @@ export interface PodcastEpisodePayload {
   isFeatured: boolean;
   displayOrder: string;
 }
-
-export type PodcastEpisodeField = keyof PodcastEpisodePayload;
-
-export type PodcastEpisodeErrors = Partial<Record<PodcastEpisodeField, string>>;
-
-export interface UploadImageResponse {
-  message: string;
-  filename: string;
-  imageUrl: string;
-}
