@@ -1,20 +1,211 @@
 "use client";
 
 import { podcastPublicApi } from "@/lib/api";
-import { formatPodcastDate, getFeaturedEpisode } from "@/lib/podcast";
+import { formatPodcastDate } from "@/lib/podcast";
 import { PodcastEpisode } from "@/lib/types";
 import Link from "next/link";
-import { ArrowRight, ExternalLink, LoaderCircle, Mic2, Play } from "lucide-react";
+import {
+  ArrowRight,
+  ExternalLink,
+  LoaderCircle,
+  Mic2,
+  Play,
+  PlayCircle,
+  Search,
+  Sparkles,
+  Star,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 function buildEpisodeHref(externalUrl: string | null, embedUrl: string | null) {
   return externalUrl || embedUrl || "#episodios";
 }
 
+function extractYouTubeId(value: string | null | undefined) {
+  if (!value) return null;
+
+  const raw = value.trim();
+  if (!raw) return null;
+
+  if (/^[a-zA-Z0-9_-]{11}$/.test(raw)) return raw;
+
+  try {
+    const parsed = new URL(raw);
+
+    if (parsed.hostname.includes("youtu.be")) {
+      const id = parsed.pathname.replace("/", "").trim();
+      return id || null;
+    }
+
+    if (parsed.hostname.includes("youtube.com")) {
+      if (parsed.pathname.includes("/embed/")) {
+        const parts = parsed.pathname.split("/embed/");
+        const id = parts[1]?.split(/[?&/]/)[0];
+        return id || null;
+      }
+
+      const id = parsed.searchParams.get("v");
+      return id || null;
+    }
+
+    if (parsed.hostname.includes("img.youtube.com")) {
+      const parts = parsed.pathname.split("/");
+      const viIndex = parts.findIndex((part) => part === "vi");
+      if (viIndex !== -1 && parts[viIndex + 1]) {
+        return parts[viIndex + 1];
+      }
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function buildYouTubeEmbedUrl(episode: PodcastEpisode) {
+  const fromEmbed = normalizeEmbedUrl(episode.embedUrl, episode.externalUrl);
+  if (fromEmbed) return fromEmbed;
+
+  const id =
+    extractYouTubeId(episode.embedUrl) ||
+    extractYouTubeId(episode.externalUrl) ||
+    extractYouTubeId(episode.thumbnailUrl);
+
+  return id ? `https://www.youtube.com/embed/${id}` : null;
+}
+
+function buildYouTubeThumbnailUrl(episode: PodcastEpisode) {
+  if (episode.thumbnailUrl?.trim()) return episode.thumbnailUrl.trim();
+
+  const id =
+    extractYouTubeId(episode.embedUrl) ||
+    extractYouTubeId(episode.externalUrl) ||
+    extractYouTubeId(episode.thumbnailUrl);
+
+  return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : null;
+}
+
+function normalizeEmbedUrl(embedUrl: string | null, externalUrl: string | null) {
+  const raw = embedUrl || externalUrl;
+  if (!raw) return null;
+
+  const clean = raw.trim();
+  if (!clean) return null;
+
+  if (clean.includes("youtube.com/embed/")) return clean;
+  if (clean.includes("tiktok.com/embed")) return clean;
+
+  try {
+    const parsed = new URL(clean);
+
+    if (parsed.hostname.includes("youtu.be")) {
+      const id = parsed.pathname.replace("/", "");
+      return id ? `https://www.youtube.com/embed/${id}` : null;
+    }
+
+    if (parsed.hostname.includes("youtube.com")) {
+      const id = parsed.searchParams.get("v");
+      if (id) return `https://www.youtube.com/embed/${id}`;
+    }
+
+    return clean;
+  } catch {
+    return null;
+  }
+}
+
+function getEpisodeEmbedUrl(episode: PodcastEpisode) {
+  if (episode.platform === "YOUTUBE") {
+    return buildYouTubeEmbedUrl(episode);
+  }
+
+  if (episode.platform === "TIKTOK") {
+    return episode.embedUrl?.trim() || null;
+  }
+
+  return normalizeEmbedUrl(episode.embedUrl, episode.externalUrl);
+}
+
+function getEpisodeThumbnailUrl(episode: PodcastEpisode) {
+  if (episode.platform === "YOUTUBE") {
+    return buildYouTubeThumbnailUrl(episode);
+  }
+
+  return episode.thumbnailUrl?.trim() || null;
+}
+
+function EpisodeMedia({
+  episode,
+  heightClass = "h-[320px]",
+}: {
+  episode: PodcastEpisode;
+  heightClass?: string;
+}) {
+  const finalEmbedUrl = getEpisodeEmbedUrl(episode);
+  const thumbnailUrl = getEpisodeThumbnailUrl(episode);
+  const isTikTok = episode.platform === "TIKTOK";
+
+  if (finalEmbedUrl) {
+    return (
+      <div className="overflow-hidden rounded-[28px] border border-[#DDD3C2] bg-black shadow-sm">
+        {isTikTok ? (
+          <div className="flex justify-center bg-[#111] px-3 py-4">
+            <div className="w-full max-w-[380px] overflow-hidden rounded-[22px] bg-black">
+              <iframe
+                src={finalEmbedUrl}
+                title={episode.title}
+                className="h-[720px] w-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                referrerPolicy="strict-origin-when-cross-origin"
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="aspect-video w-full">
+            <iframe
+              src={finalEmbedUrl}
+              title={episode.title}
+              className="h-full w-full"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+              referrerPolicy="strict-origin-when-cross-origin"
+            />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-hidden rounded-[28px] border border-[#DDD3C2] bg-[#E9E2D5] shadow-sm">
+      {thumbnailUrl ? (
+        <img
+          src={thumbnailUrl}
+          alt={episode.title}
+          className={`w-full object-cover ${heightClass}`}
+        />
+      ) : (
+        <div className={`flex items-center justify-center text-[#8B6A45] ${heightClass}`}>
+          <div className="flex flex-col items-center gap-3">
+            <PlayCircle className="h-12 w-12" />
+            <span className="text-sm font-medium">Vista previa no disponible</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function PodcastPage() {
   const [episodes, setEpisodes] = useState<PodcastEpisode[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [platformFilter, setPlatformFilter] = useState<"ALL" | "YOUTUBE" | "TIKTOK" | "OTHER">(
+    "ALL"
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -27,7 +218,9 @@ export default function PodcastPage() {
       })
       .catch((error) => {
         if (!isMounted) return;
-        setLoadError(error instanceof Error ? error.message : "No fue posible cargar el podcast.");
+        setLoadError(
+          error instanceof Error ? error.message : "No fue posible cargar el podcast."
+        );
       })
       .finally(() => {
         if (!isMounted) return;
@@ -39,150 +232,347 @@ export default function PodcastPage() {
     };
   }, []);
 
-  const featuredEpisode = useMemo(() => getFeaturedEpisode(episodes), [episodes]);
+  const publishedEpisodes = useMemo(() => {
+    return episodes.filter((episode) => episode.status === "PUBLISHED");
+  }, [episodes]);
+
+  const featuredEpisodes = useMemo(() => {
+    return [...publishedEpisodes]
+      .filter((episode) => episode.isFeatured)
+      .sort((a, b) => {
+        const orderDiff = Number(a.displayOrder ?? 9999) - Number(b.displayOrder ?? 9999);
+        if (orderDiff !== 0) return orderDiff;
+
+        const aDate = new Date(a.publishedAt || a.createdAt).getTime();
+        const bDate = new Date(b.publishedAt || b.createdAt).getTime();
+        return bDate - aDate;
+      })
+      .slice(0, 2);
+  }, [publishedEpisodes]);
+
+  const mainFeatured = featuredEpisodes[0] ?? null;
+  const secondaryFeatured = featuredEpisodes[1] ?? null;
+
+  const filteredPublishedEpisodes = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+
+    return [...publishedEpisodes]
+      .filter((episode) => {
+        const matchesSearch =
+          !normalizedSearch ||
+          episode.title.toLowerCase().includes(normalizedSearch) ||
+          (episode.shortDescription || "").toLowerCase().includes(normalizedSearch) ||
+          (episode.fullDescription || "").toLowerCase().includes(normalizedSearch);
+
+        const matchesPlatform =
+          platformFilter === "ALL" || episode.platform === platformFilter;
+
+        return matchesSearch && matchesPlatform;
+      })
+      .sort((a, b) => {
+        const aDate = new Date(a.publishedAt || a.createdAt).getTime();
+        const bDate = new Date(b.publishedAt || b.createdAt).getTime();
+        return bDate - aDate;
+      });
+  }, [publishedEpisodes, platformFilter, searchTerm]);
 
   return (
-    <main className="bg-[#F2F1EC]">
-      <section className="relative overflow-hidden px-4 pb-12 pt-16 md:px-6 md:pb-16 md:pt-20">
+    <main className="bg-[linear-gradient(180deg,#F7F4EE_0%,#F2EEE7_55%,#EFE9DE_100%)]">
+      <section className="relative overflow-hidden px-4 pb-14 pt-16 md:px-6 md:pb-18 md:pt-20">
         <div className="absolute inset-0">
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,#F2F1EC_0%,#EEECE6_55%,#F2F1EC_100%)]" />
-          <div className="absolute left-[-80px] top-10 h-80 w-80 rounded-full bg-[#D9D3C7]/18 blur-3xl" />
-          <div className="absolute bottom-0 right-[-60px] h-80 w-80 rounded-full bg-[#E4DED3]/30 blur-3xl" />
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(247,244,238,1)_0%,rgba(241,236,228,0.88)_60%,rgba(247,244,238,1)_100%)]" />
+          <div className="absolute left-[-70px] top-4 h-72 w-72 rounded-full bg-[#D7B36A]/15 blur-3xl" />
+          <div className="absolute right-[-40px] top-24 h-80 w-80 rounded-full bg-[#102345]/12 blur-3xl" />
+          <div className="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-[#C8B08A]/18 blur-3xl" />
         </div>
 
-        <div className="relative mx-auto max-w-[1680px]">
-          <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-center xl:gap-10">
-            <div className="max-w-[700px] pt-2 md:pt-4">
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#D8D2C6] bg-[#FAF8F4] px-5 py-2 shadow-sm">
-                <span className="h-2 w-2 rounded-full bg-[#B78B4E]" />
-                <span className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#8B6A45]">Podcast ANRO</span>
+        <div className="relative mx-auto max-w-[1780px]">
+          <div className="grid gap-10 xl:grid-cols-[0.78fr_1.22fr] xl:items-start">
+            <div className="max-w-[720px] pt-2">
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#D8CFBF] bg-white/70 px-5 py-2 shadow-sm backdrop-blur">
+                <span className="h-2 w-2 rounded-full bg-[#C79A2C]" />
+                <span className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#8B6A45]">
+                  Podcast ANRO
+                </span>
               </div>
 
-              <h1 className="max-w-[650px] text-4xl leading-[0.98] text-[#4B392D] sm:text-5xl md:text-6xl lg:text-[72px] xl:text-[78px]">
+              <h1 className="max-w-[680px] text-4xl leading-[0.97] text-[#16233A] sm:text-5xl md:text-6xl lg:text-[74px] xl:text-[80px]">
                 Ideas, visión y conversaciones que
-                <span className="mt-2 block text-[#B78B4E]">construyen valor</span>
+                <span className="mt-2 block text-[#C79A2C]">construyen valor</span>
               </h1>
 
-              <div className="mt-7 h-[2px] w-24 rounded-full bg-[#C7B08C]" />
+              <div className="mt-7 h-[2px] w-24 rounded-full bg-[#C7A25A]" />
 
-              <p className="mt-7 max-w-[620px] text-[15px] leading-8 text-[#67584B] md:text-[17px]">
-                Un espacio de ANRO para compartir perspectivas, experiencias, entrevistas y temas clave sobre desarrollo,
-                construcción, inversión y visión empresarial.
+              <p className="mt-7 max-w-[620px] text-[15px] leading-8 text-[#5C5145] md:text-[17px]">
+                Un espacio de ANRO para compartir perspectivas, experiencias, entrevistas y
+                temas clave sobre desarrollo, construcción, inversión y visión empresarial.
               </p>
 
               <div className="mt-9 flex flex-col gap-4 sm:flex-row">
-                <Link href="#episodios" className="inline-flex items-center justify-center gap-2 rounded-full bg-[#B78B4E] px-8 py-3.5 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(183,139,78,0.24)] transition duration-300 hover:-translate-y-0.5 hover:bg-[#A67A3E]">
+                <Link
+                  href="#episodios"
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-[#C79A2C] px-8 py-3.5 text-sm font-semibold text-[#101522] shadow-[0_16px_34px_rgba(199,154,44,0.26)] transition duration-300 hover:-translate-y-0.5 hover:bg-[#B6891E]"
+                >
                   Ver episodios
                   <ArrowRight className="h-4 w-4" />
                 </Link>
 
-                <Link href="#destacado" className="inline-flex items-center justify-center rounded-full border border-[#D3CCC0] bg-[#FAF8F4] px-8 py-3.5 text-sm font-semibold text-[#6E5C4C] transition duration-300 hover:bg-white">
-                  Escuchar destacado
+                <Link
+                  href="#destacados"
+                  className="inline-flex items-center justify-center rounded-full border border-[#D5CCBF] bg-white/70 px-8 py-3.5 text-sm font-semibold text-[#5D4F43] transition duration-300 hover:bg-white"
+                >
+                  Ver destacados
                 </Link>
+              </div>
+
+              <div className="mt-10 grid gap-4 sm:grid-cols-3">
+                <InfoMiniCard label="Publicados" value={`${publishedEpisodes.length}`} />
+                <InfoMiniCard label="Destacados visibles" value={`${featuredEpisodes.length}/2`} />
+                <InfoMiniCard label="Experiencia" value="Video integrado" />
               </div>
             </div>
 
-            <div className="relative">
-              <div className="rounded-[34px] border border-[#D8D2C6] bg-[#FCFBF8] p-6 shadow-[0_24px_70px_rgba(75,57,45,0.08)] md:p-7">
-                <div className="mb-5 flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.30em] text-[#8B6A45]">Episodio destacado</p>
-                    <h2 className="mt-3 text-2xl font-semibold text-[#4B392D] md:text-[34px]">
-                      {featuredEpisode ? featuredEpisode.title : isLoading ? "Cargando contenido destacado..." : "Próximamente contenido destacado"}
-                    </h2>
-                  </div>
-
-                  <div className="hidden h-14 w-14 items-center justify-center rounded-full bg-[#F1ECE4] text-[#B78B4E] md:flex">
-                    <Mic2 className="h-6 w-6" />
-                  </div>
+            <div
+              id="destacados"
+              className="rounded-[36px] border border-[#D9CFBF] bg-[linear-gradient(180deg,#FFFCF7_0%,#F8F2E8_100%)] p-5 shadow-[0_28px_80px_rgba(16,35,69,0.08)] md:p-6 lg:p-7"
+            >
+              <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.30em] text-[#B6862A]">
+                    Selección destacada
+                  </p>
+                  <h2 className="mt-3 text-3xl font-semibold text-[#16233A] md:text-[40px]">
+                    Hasta 2 episodios principales
+                  </h2>
+                  <p className="mt-3 max-w-2xl text-sm leading-7 text-[#635648]">
+                    Esta área muestra únicamente los dos episodios destacados con mayor prioridad
+                    visual. El orden se controla desde el panel administrativo.
+                  </p>
                 </div>
 
-                <p className="max-w-[560px] text-sm leading-7 text-[#67584B]">
-                  {featuredEpisode?.shortDescription ||
-                    "Publica y destaca episodios desde el panel administrativo para reflejarlos automáticamente aquí."}
-                </p>
+                <div className="hidden h-14 w-14 items-center justify-center rounded-full bg-[#16233A] text-[#E7C87C] md:flex">
+                  <Mic2 className="h-6 w-6" />
+                </div>
+              </div>
 
-                <div id="destacado" className="mt-6 grid gap-4 md:grid-cols-[0.9fr_1.1fr]">
-                  <div className="overflow-hidden rounded-[26px] border border-[#E3DDD2] bg-[linear-gradient(135deg,#E6D8C5_0%,#D9C2A0_100%)] p-5">
-                    {featuredEpisode?.thumbnailUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={featuredEpisode.thumbnailUrl} alt={featuredEpisode.title} className="h-full min-h-[220px] w-full rounded-[22px] object-cover" />
+              {mainFeatured ? (
+                <div className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
+                  <article className="rounded-[30px] border border-[#E4DAC9] bg-white p-4 shadow-[0_18px_50px_rgba(16,35,69,0.06)] md:p-5">
+                    <div className="mb-4 flex flex-wrap items-center gap-2">
+                      <span className="inline-flex items-center gap-2 rounded-full bg-[#16233A] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-white">
+                        <Star className="h-3.5 w-3.5 text-[#E7C87C]" />
+                        Destacado principal
+                      </span>
+                      <span className="rounded-full border border-[#E1D8C9] bg-[#FAF6EE] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8B6A45]">
+                        Prioridad {mainFeatured.displayOrder ?? 0}
+                      </span>
+                    </div>
+
+                    <EpisodeMedia
+                      episode={mainFeatured}
+                      heightClass={mainFeatured.platform === "TIKTOK" ? "h-[720px]" : "h-[420px]"}
+                    />
+
+                    <div className="mt-5">
+                      <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8B6A45]">
+                        <span>{mainFeatured.platform}</span>
+                        <span>•</span>
+                        <span>
+                          {formatPodcastDate(mainFeatured.publishedAt || mainFeatured.createdAt)}
+                        </span>
+                      </div>
+
+                      <h3 className="mt-4 text-[30px] font-semibold leading-tight text-[#16233A] md:text-[38px]">
+                        {mainFeatured.title}
+                      </h3>
+
+                      <p className="mt-4 text-sm leading-8 text-[#5F5448]">
+                        {mainFeatured.fullDescription ||
+                          mainFeatured.shortDescription ||
+                          "Contenido destacado sin descripción disponible."}
+                      </p>
+
+                      <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                        <InfoBox
+                          label="Duración"
+                          value={mainFeatured.duration || "Por definir"}
+                        />
+                        <InfoBox
+                          label="Invitados"
+                          value={mainFeatured.guests || "Sin invitados"}
+                        />
+                        <InfoBox
+                          label="Publicación"
+                          value={formatPodcastDate(
+                            mainFeatured.publishedAt || mainFeatured.createdAt
+                          )}
+                        />
+                      </div>
+
+                      <div className="mt-6 flex flex-wrap gap-3">
+                        <span className="inline-flex items-center rounded-full border border-[#D8D2C6] bg-[#F9F5EE] px-5 py-3 text-sm font-medium text-[#67584B]">
+                          Reproducción integrada activa
+                        </span>
+
+                        {mainFeatured.externalUrl && (
+                          <Link
+                            href={mainFeatured.externalUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center justify-center gap-2 rounded-full bg-[#16233A] px-7 py-3 text-sm font-semibold text-[#F7F3EC] transition duration-300 hover:bg-[#1D2F4D]"
+                          >
+                            Ver en plataforma
+                            <ExternalLink className="h-4 w-4" />
+                          </Link>
+                        )}
+                      </div>
+                    </div>
+                  </article>
+
+                  <div className="flex flex-col gap-5">
+                    {secondaryFeatured ? (
+                      <article className="rounded-[28px] border border-[#E4DAC9] bg-white p-4 shadow-[0_18px_50px_rgba(16,35,69,0.06)]">
+                        <div className="mb-4 flex flex-wrap items-center gap-2">
+                          <span className="inline-flex items-center gap-2 rounded-full bg-[#F4E7C7] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8B641D]">
+                            <Sparkles className="h-3.5 w-3.5" />
+                            Destacado secundario
+                          </span>
+                          <span className="rounded-full border border-[#E1D8C9] bg-[#FAF6EE] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8B6A45]">
+                            Prioridad {secondaryFeatured.displayOrder ?? 0}
+                          </span>
+                        </div>
+
+                        <EpisodeMedia
+                          episode={secondaryFeatured}
+                          heightClass={
+                            secondaryFeatured.platform === "TIKTOK"
+                              ? "h-[680px]"
+                              : "h-[260px]"
+                          }
+                        />
+
+                        <h3 className="mt-4 text-2xl font-semibold leading-tight text-[#16233A]">
+                          {secondaryFeatured.title}
+                        </h3>
+
+                        <p className="mt-3 text-sm leading-7 text-[#5F5448]">
+                          {secondaryFeatured.shortDescription ||
+                            secondaryFeatured.fullDescription ||
+                            "Contenido sin resumen disponible."}
+                        </p>
+
+                        <div className="mt-5 grid gap-3">
+                          <InfoBox
+                            label="Duración"
+                            value={secondaryFeatured.duration || "Por definir"}
+                          />
+                          <InfoBox
+                            label="Invitados"
+                            value={secondaryFeatured.guests || "Sin invitados"}
+                          />
+                        </div>
+                      </article>
                     ) : (
-                      <div className="flex h-full min-h-[220px] flex-col justify-between rounded-[22px] border border-white/30 bg-[linear-gradient(135deg,rgba(255,255,255,0.16)_0%,rgba(255,255,255,0.05)_100%)] p-5">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#221B18]/10 text-[#4A3525]">
-                          <Play className="ml-0.5 h-5 w-5" />
+                      <article className="flex min-h-[320px] flex-col justify-between rounded-[28px] border border-dashed border-[#D9CCB6] bg-[linear-gradient(180deg,#FFF9EF_0%,#F8F2E7_100%)] p-5">
+                        <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-[#16233A]/10 text-[#16233A]">
+                          <Play className="h-5 w-5" />
                         </div>
 
                         <div>
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#4A3525]">Podcast / Video</p>
-                          <h3 className="mt-3 text-2xl font-semibold leading-snug text-[#221B18]">
-                            {featuredEpisode ? featuredEpisode.platform : "Portada del episodio"}
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#B6862A]">
+                            Segundo espacio destacado
+                          </p>
+                          <h3 className="mt-3 text-2xl font-semibold text-[#16233A]">
+                            Disponible para otro episodio
                           </h3>
+                          <p className="mt-3 text-sm leading-7 text-[#635648]">
+                            Marca otro episodio como destacado y ajusta su prioridad desde el panel
+                            administrativo para que aparezca aquí automáticamente.
+                          </p>
                         </div>
-                      </div>
+                      </article>
                     )}
-                  </div>
 
-                  <div className="space-y-4">
-                    <div className="rounded-[24px] border border-[#E3DDD2] bg-[#F7F4EE] p-5">
-                      <p className="text-[11px] uppercase tracking-[0.24em] text-[#9A7647]">Título</p>
-                      <p className="mt-3 text-xl font-semibold text-[#221B18]">{featuredEpisode?.title || "Sin episodio destacado"}</p>
-                    </div>
-
-                    <div className="rounded-[24px] border border-[#E3DDD2] bg-[#F7F4EE] p-5">
-                      <p className="text-[11px] uppercase tracking-[0.24em] text-[#9A7647]">Resumen</p>
-                      <p className="mt-3 text-sm leading-7 text-[#67584B]">
-                        {featuredEpisode?.fullDescription || featuredEpisode?.shortDescription ||
-                          "Cuando publiques contenido desde admin, esta sección mostrará automáticamente el episodio destacado y su resumen."}
+                    <article className="rounded-[28px] border border-[#D8D2C6] bg-[#16233A] p-5 text-white">
+                      <p className="text-[11px] uppercase tracking-[0.30em] text-[#E7C87C]">
+                        Conectado al backend
                       </p>
-                    </div>
-
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="rounded-[22px] border border-[#E3DDD2] bg-[#F7F4EE] p-4">
-                        <p className="text-[11px] uppercase tracking-[0.24em] text-[#9A7647]">Duración</p>
-                        <p className="mt-2 text-lg font-semibold text-[#221B18]">{featuredEpisode?.duration || "Por definir"}</p>
-                      </div>
-
-                      <div className="rounded-[22px] border border-[#E3DDD2] bg-[#F7F4EE] p-4">
-                        <p className="text-[11px] uppercase tracking-[0.24em] text-[#9A7647]">Publicación</p>
-                        <p className="mt-2 text-lg font-semibold text-[#221B18]">{featuredEpisode ? formatPodcastDate(featuredEpisode.publishedAt || featuredEpisode.createdAt) : "Próximamente"}</p>
-                      </div>
-                    </div>
-
-                    {featuredEpisode && (
-                      <Link href={buildEpisodeHref(featuredEpisode.externalUrl, featuredEpisode.embedUrl)} target={featuredEpisode.externalUrl || featuredEpisode.embedUrl ? "_blank" : undefined} rel={featuredEpisode.externalUrl || featuredEpisode.embedUrl ? "noopener noreferrer" : undefined} className="inline-flex items-center justify-center gap-2 rounded-full bg-[#221B18] px-7 py-3 text-sm font-semibold text-[#F7F3EC] transition duration-300 hover:bg-[#2E2520]">
-                        Reproducir episodio
-                        <Play className="h-4 w-4" />
-                      </Link>
-                    )}
+                      <p className="mt-3 text-sm leading-7 text-slate-200">
+                        Esta ventana consume episodios publicados desde el backend. Los dos
+                        destacados visibles se definen por `isFeatured` y por el orden de prioridad.
+                      </p>
+                    </article>
                   </div>
                 </div>
-
-                <div className="mt-6 rounded-[24px] border border-[#D8D2C6] bg-[#F1ECE4] px-5 py-5">
-                  <p className="text-[11px] uppercase tracking-[0.28em] text-[#9A7647]">Conectado al backend</p>
-                  <p className="mt-3 text-sm leading-7 text-[#67584B]">
-                    Esta ventana ya consume los episodios publicados desde el backend. El contenido destacado y el listado se
-                    alimentan desde lo administrado en el panel de Podcast.
-                  </p>
+              ) : (
+                <div className="rounded-[28px] border border-dashed border-[#D8CCB7] bg-white/70 px-6 py-12 text-center text-[#67584B]">
+                  {isLoading
+                    ? "Cargando episodios destacados..."
+                    : "Aún no hay episodios destacados publicados."}
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
       </section>
 
       <section id="episodios" className="px-4 pb-16 md:px-6 md:pb-20">
-        <div className="mx-auto max-w-[1680px] rounded-[34px] border border-[#D8D2C6] bg-[#FCFBF8] p-6 shadow-[0_24px_70px_rgba(75,57,45,0.06)] md:p-8">
+        <div className="mx-auto max-w-[1780px] rounded-[34px] border border-[#D8D2C6] bg-[#FCFBF8] p-6 shadow-[0_24px_70px_rgba(75,57,45,0.06)] md:p-8 lg:p-10">
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.30em] text-[#8B6A45]">Episodios publicados</p>
-              <h2 className="mt-3 text-3xl font-semibold text-[#4B392D]">Listado público conectado</h2>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.30em] text-[#B6862A]">
+                Biblioteca pública
+              </p>
+              <h2 className="mt-3 text-3xl font-semibold text-[#16233A]">
+                Todos los episodios publicados
+              </h2>
               <p className="mt-3 max-w-2xl text-sm leading-7 text-[#67584B]">
-                Esta sección ya está enlazada al backend y lista para evolucionar hacia un diseño más premium sin rehacer la base funcional.
+                Aquí aparecen todos los episodios publicados. Puedes filtrarlos por texto o por
+                plataforma.
               </p>
             </div>
+
             <div className="rounded-2xl border border-[#E3DDD2] bg-[#F7F4EE] px-4 py-3 text-sm text-[#67584B]">
-              {isLoading ? "Cargando episodios..." : `${episodes.length} episodio${episodes.length === 1 ? "" : "s"} publicado${episodes.length === 1 ? "" : "s"}`}
+              {isLoading
+                ? "Cargando episodios..."
+                : `${filteredPublishedEpisodes.length} episodio${
+                    filteredPublishedEpisodes.length === 1 ? "" : "s"
+                  } en listado`}
+            </div>
+          </div>
+
+          <div className="mt-8 rounded-[24px] border border-[#E7DFD2] bg-[#F9F6F0] p-4">
+            <div className="grid gap-4 lg:grid-cols-[1.4fr_0.6fr]">
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-[#5B4E43]">Buscar</span>
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8B7B69]" />
+                  <input
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Buscar por título o descripción..."
+                    className="w-full rounded-[18px] border border-[#DED5C8] bg-white px-11 py-3.5 text-sm text-[#221B18] outline-none transition focus:border-[#C79A2C] focus:ring-4 focus:ring-[rgba(199,154,44,0.12)]"
+                  />
+                </div>
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-[#5B4E43]">Plataforma</span>
+                <select
+                  value={platformFilter}
+                  onChange={(e) =>
+                    setPlatformFilter(
+                      e.target.value as "ALL" | "YOUTUBE" | "TIKTOK" | "OTHER"
+                    )
+                  }
+                  className="w-full rounded-[18px] border border-[#DED5C8] bg-white px-4 py-3.5 text-sm text-[#221B18] outline-none transition focus:border-[#C79A2C] focus:ring-4 focus:ring-[rgba(199,154,44,0.12)]"
+                >
+                  <option value="ALL">Todas</option>
+                  <option value="YOUTUBE">YouTube</option>
+                  <option value="TIKTOK">TikTok</option>
+                  <option value="OTHER">Otra</option>
+                </select>
+              </label>
             </div>
           </div>
 
@@ -195,32 +585,32 @@ export default function PodcastPage() {
             <div className="mt-8 rounded-[24px] border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-700">
               {loadError}
             </div>
-          ) : episodes.length === 0 ? (
+          ) : filteredPublishedEpisodes.length === 0 ? (
             <div className="mt-8 rounded-[24px] border border-dashed border-[#D8D2C6] bg-[#F7F4EE] px-6 py-10 text-center text-[#67584B]">
-              Aún no hay episodios publicados. En cuanto publiques contenido desde el panel admin, aparecerá aquí.
+              No hay episodios que coincidan con los filtros.
             </div>
           ) : (
-            <div className="mt-8 grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
-              {episodes.map((episode) => {
+            <div className="mt-8 grid gap-6 xl:grid-cols-2">
+              {filteredPublishedEpisodes.map((episode) => {
                 const href = buildEpisodeHref(episode.externalUrl, episode.embedUrl);
+
                 return (
-                  <article key={episode.id} className="flex h-full flex-col rounded-[28px] border border-[#E3DDD2] bg-[#F7F4EE] p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg">
-                    <div className="overflow-hidden rounded-[22px] bg-[#E9E2D5]">
-                      {episode.thumbnailUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={episode.thumbnailUrl} alt={episode.title} className="h-52 w-full object-cover" />
-                      ) : (
-                        <div className="flex h-52 items-center justify-center text-[#8B6A45]">
-                          <Mic2 className="h-10 w-10" />
-                        </div>
-                      )}
-                    </div>
+                  <article
+                    key={episode.id}
+                    className="flex h-full flex-col rounded-[30px] border border-[#E3DDD2] bg-[#F7F4EE] p-6 shadow-[0_18px_45px_rgba(15,23,42,0.06)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_24px_55px_rgba(15,23,42,0.08)]"
+                  >
+                    <EpisodeMedia
+                      episode={episode}
+                      heightClass={episode.platform === "TIKTOK" ? "h-[720px]" : "h-[320px]"}
+                    />
 
                     <div className="mt-5 flex flex-1 flex-col">
                       <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8B6A45]">
                         <span>{episode.platform}</span>
                         <span>•</span>
-                        <span>{formatPodcastDate(episode.publishedAt || episode.createdAt)}</span>
+                        <span>
+                          {formatPodcastDate(episode.publishedAt || episode.createdAt)}
+                        </span>
                         {episode.isFeatured && (
                           <>
                             <span>•</span>
@@ -229,24 +619,55 @@ export default function PodcastPage() {
                         )}
                       </div>
 
-                      <h3 className="mt-4 text-2xl font-semibold text-[#221B18]">{episode.title}</h3>
-                      <p className="mt-3 text-sm leading-7 text-[#67584B]">{episode.shortDescription || episode.fullDescription || "Contenido sin resumen disponible."}</p>
+                      <h3 className="mt-4 text-[30px] font-semibold leading-tight text-[#16233A]">
+                        {episode.title}
+                      </h3>
+
+                      <p className="mt-3 text-sm leading-7 text-[#67584B]">
+                        {episode.shortDescription ||
+                          episode.fullDescription ||
+                          "Contenido sin resumen disponible."}
+                      </p>
 
                       <div className="mt-5 grid gap-3 text-sm text-[#67584B] sm:grid-cols-2">
                         <div className="rounded-[18px] border border-[#E3DDD2] bg-white px-4 py-3">
-                          <span className="block text-[11px] uppercase tracking-[0.22em] text-[#9A7647]">Duración</span>
-                          <span className="mt-2 block font-medium text-[#221B18]">{episode.duration || "Por definir"}</span>
+                          <span className="block text-[11px] uppercase tracking-[0.22em] text-[#9A7647]">
+                            Duración
+                          </span>
+                          <span className="mt-2 block font-medium text-[#221B18]">
+                            {episode.duration || "Por definir"}
+                          </span>
                         </div>
+
                         <div className="rounded-[18px] border border-[#E3DDD2] bg-white px-4 py-3">
-                          <span className="block text-[11px] uppercase tracking-[0.22em] text-[#9A7647]">Invitados</span>
-                          <span className="mt-2 block font-medium text-[#221B18]">{episode.guests || "Sin invitados"}</span>
+                          <span className="block text-[11px] uppercase tracking-[0.22em] text-[#9A7647]">
+                            Invitados
+                          </span>
+                          <span className="mt-2 block font-medium text-[#221B18]">
+                            {episode.guests || "Sin invitados"}
+                          </span>
                         </div>
                       </div>
 
                       <div className="mt-6 flex flex-wrap gap-3">
-                        {href !== "#episodios" ? (
-                          <Link href={href} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-full bg-[#221B18] px-5 py-3 text-sm font-semibold text-[#F7F3EC] transition hover:bg-[#2E2520]">
-                            Ver episodio
+                        {episode.externalUrl ? (
+                          <Link
+                            href={episode.externalUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 rounded-full bg-[#16233A] px-5 py-3 text-sm font-semibold text-[#F7F3EC] transition hover:bg-[#1D2F4D]"
+                          >
+                            Ver en plataforma
+                            <ExternalLink className="h-4 w-4" />
+                          </Link>
+                        ) : href !== "#episodios" ? (
+                          <Link
+                            href={href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 rounded-full bg-[#16233A] px-5 py-3 text-sm font-semibold text-[#F7F3EC] transition hover:bg-[#1D2F4D]"
+                          >
+                            Abrir contenido
                             <ExternalLink className="h-4 w-4" />
                           </Link>
                         ) : (
@@ -264,5 +685,25 @@ export default function PodcastPage() {
         </div>
       </section>
     </main>
+  );
+}
+
+function InfoMiniCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-[22px] border border-[#DDD3C3] bg-white/80 px-5 py-4 shadow-sm backdrop-blur">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#B6862A]">
+        {label}
+      </p>
+      <p className="mt-2 text-lg font-semibold text-[#16233A]">{value}</p>
+    </div>
+  );
+}
+
+function InfoBox({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-[22px] border border-[#E3DDD2] bg-[#FAF7F1] p-4">
+      <p className="text-[11px] uppercase tracking-[0.24em] text-[#9A7647]">{label}</p>
+      <p className="mt-2 text-base font-semibold text-[#16233A]">{value}</p>
+    </div>
   );
 }

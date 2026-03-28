@@ -37,10 +37,13 @@ export default function AdminRoute({ children }: AdminRouteProps) {
       })
       .catch((error) => {
         if (!isMounted) return;
-        if (error instanceof ApiError && (error.status === 401 || error.status === 403 || error.status === 500)) {
+        if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
           authStorage.clear();
+          router.replace("/login?expired=1");
+          return;
         }
-        router.replace("/login?expired=1");
+
+        setIsChecking(false);
       });
 
     return () => {

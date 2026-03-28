@@ -1,5 +1,11 @@
 import { authStorage } from "@/lib/auth-storage";
-import { AuthResponse, PodcastEpisode, PodcastEpisodePayload, PodcastStatus } from "@/lib/types";
+import {
+  AuthResponse,
+  PodcastEpisode,
+  PodcastEpisodePayload,
+  PodcastStatus,
+  UploadImageResponse,
+} from "@/lib/types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "http://localhost:5000/api";
 
@@ -16,9 +22,17 @@ class ApiError extends Error {
   }
 }
 
+async function parseResponse(response: Response) {
+  const contentType = response.headers.get("content-type") || "";
+  return contentType.includes("application/json") ? response.json() : null;
+}
+
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const headers = new Headers(options.headers);
-  headers.set("Content-Type", "application/json");
+
+  if (!(options.body instanceof FormData)) {
+    headers.set("Content-Type", "application/json");
+  }
 
   if (options.auth) {
     const session = authStorage.get();
@@ -33,8 +47,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     cache: "no-store",
   });
 
-  const contentType = response.headers.get("content-type") || "";
-  const data = contentType.includes("application/json") ? await response.json() : null;
+  const data = await parseResponse(response);
 
   if (!response.ok) {
     const message = data?.message || "No fue posible completar la solicitud.";
@@ -55,6 +68,12 @@ export const adminApi = {
     return request<AuthResponse["admin"]>("/admin/auth/me", {
       auth: true,
     });
+  },
+};
+
+export const podcastPublicApi = {
+  list() {
+    return request<PodcastEpisode[]>("/podcast/episodes");
   },
 };
 
@@ -94,6 +113,19 @@ export const podcastAdminApi = {
       method: "PATCH",
       auth: true,
       body: JSON.stringify({ isFeatured }),
+    });
+  },
+};
+
+export const uploadAdminApi = {
+  uploadPodcastImage(file: File) {
+    const formData = new FormData();
+    formData.append("image", file);
+
+    return request<UploadImageResponse>("/admin/uploads/podcast-image", {
+      method: "POST",
+      auth: true,
+      body: formData,
     });
   },
 };
