@@ -1,10 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
-import AdminRoute from "@/components/admin/AdminRoute";
 import PodcastEpisodeForm from "@/components/admin/PodcastEpisodeForm";
 import { podcastAdminApi } from "@/lib/api";
-import { authStorage } from "@/lib/auth-storage";
 import {
   PodcastEpisode,
   PodcastEpisodePayload,
@@ -17,7 +15,6 @@ import {
   Eye,
   Filter,
   LoaderCircle,
-  LogOut,
   PencilLine,
   Plus,
   RefreshCw,
@@ -29,7 +26,6 @@ import {
   X,
   XCircle,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 const STATUS_FILTERS: Array<{ label: string; value: "ALL" | PodcastStatus }> = [
@@ -155,15 +151,6 @@ function buildEpisodeThumbnail(episode: PodcastEpisode) {
 }
 
 export default function PodcastAdminClient() {
-  return (
-    <AdminRoute>
-      {(session) => <PodcastAdminView adminName={session.admin.name} />}
-    </AdminRoute>
-  );
-}
-
-function PodcastAdminView({ adminName }: { adminName: string }) {
-  const router = useRouter();
 
   const [episodes, setEpisodes] = useState<PodcastEpisode[]>([]);
   const [selectedEpisode, setSelectedEpisode] = useState<PodcastEpisode | null>(null);
@@ -390,15 +377,11 @@ function PodcastAdminView({ adminName }: { adminName: string }) {
     setSortBy("newest");
   };
 
-  const handleLogout = () => {
-    authStorage.clear();
-    router.replace("/login");
-  };
 
   const isRefreshing = activeAction?.type === "refresh";
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,#f7f4ee_0%,#f2eee7_100%)]">
+    <div className="bg-[linear-gradient(180deg,#f7f4ee_0%,#f2eee7_100%)]">
       <div className="mx-auto max-w-7xl px-4 py-6 md:px-6 lg:px-8">
         <section className="overflow-hidden rounded-[30px] border border-[#24324a] bg-[radial-gradient(circle_at_top_left,rgba(222,180,73,0.14),transparent_26%),linear-gradient(135deg,#091224_0%,#102344_58%,#1d3354_100%)] shadow-[0_28px_90px_rgba(10,20,40,0.16)]">
           <div className="px-6 py-7 md:px-8 lg:px-10">
@@ -426,18 +409,10 @@ function PodcastAdminView({ adminName }: { adminName: string }) {
                 <div className="flex flex-wrap items-center gap-3">
                   <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 backdrop-blur">
                     <p className="text-[11px] uppercase tracking-[0.22em] text-slate-300">
-                      Sesión activa
+                      Módulo activo
                     </p>
-                    <p className="mt-1 text-sm font-semibold text-white">{adminName}</p>
+                    <p className="mt-1 text-sm font-semibold text-white">Podcast</p>
                   </div>
-
-                  <button
-                    onClick={handleLogout}
-                    className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/15"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    Cerrar sesión
-                  </button>
                 </div>
               </div>
 
