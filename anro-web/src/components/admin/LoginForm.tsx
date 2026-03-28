@@ -15,7 +15,7 @@ export default function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const nextPath = useMemo(() => searchParams.get("next") || "/admin/podcast", [searchParams]);
+  const nextPath = useMemo(() => searchParams.get("next") || "/admin", [searchParams]);
   const expired = searchParams.get("expired") === "1";
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
