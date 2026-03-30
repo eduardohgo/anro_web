@@ -220,10 +220,7 @@ export default function PodcastEpisodeForm({
     }
 
     if (initialFormValues.platform === "TIKTOK") {
-      return (
-        extractTikTokVideoId(initialFormValues.externalUrl) ||
-        extractTikTokVideoId(initialFormValues.embedUrl)
-      );
+      return initialFormValues.externalUrl || "";
     }
 
     return "";
@@ -249,16 +246,15 @@ export default function PodcastEpisodeForm({
       };
     }
 
-    if (values.platform === "TIKTOK" && raw) {
-      const maybeId = extractTikTokVideoId(raw);
+    if (values.platform === "TIKTOK") {
+      const normalizedExternalUrl = values.externalUrl.trim();
+      const maybeId = extractTikTokVideoId(normalizedExternalUrl);
 
-      if (maybeId) {
-        return {
-          externalUrl: raw.startsWith("http") ? raw : values.externalUrl,
-          embedUrl: buildTikTokEmbedUrl(maybeId),
-          thumbnailUrl: values.thumbnailUrl,
-        };
-      }
+      return {
+        externalUrl: normalizedExternalUrl,
+        embedUrl: maybeId ? buildTikTokEmbedUrl(maybeId) : values.embedUrl,
+        thumbnailUrl: values.thumbnailUrl,
+      };
     }
 
     return {
@@ -292,7 +288,7 @@ export default function PodcastEpisodeForm({
         ? generatedPlatformUrls.thumbnailUrl
         : values.thumbnailUrl;
 
-    if (!values.title.trim()) {
+    if (!values.title.trim() && values.platform !== "TIKTOK") {
       nextErrors.title = "El título es obligatorio.";
     }
 
@@ -328,9 +324,8 @@ export default function PodcastEpisodeForm({
       nextErrors.embedUrl = "Para YouTube, captura el ID del video.";
     }
 
-    if (values.platform === "TIKTOK" && !platformVideoValue.trim()) {
-      nextErrors.embedUrl =
-        "Para TikTok, captura el ID del video o la URL completa del video.";
+    if (values.platform === "TIKTOK" && !generatedPlatformUrls.externalUrl) {
+      nextErrors.externalUrl = "Para TikTok, captura la URL pública del video.";
     }
 
     return nextErrors;
@@ -512,7 +507,7 @@ export default function PodcastEpisodeForm({
 
                       <div>
                         <p className="text-sm font-semibold text-[#142033]">
-                          Captura el ID del video o la URL completa de TikTok
+                          Captura la URL pública completa del video de TikTok
                         </p>
                         <p className="mt-2 text-sm leading-6 text-slate-600">
                           Lo ideal es usar la URL completa real del video, por ejemplo:
@@ -522,7 +517,7 @@ export default function PodcastEpisodeForm({
                           </span>
                         </p>
                         <p className="mt-2 text-sm leading-6 text-slate-600">
-                          También puedes pegar solo el ID numérico del video si ya lo tienes.
+                          El backend usará esa URL para consultar oEmbed y autocompletar miniatura.
                         </p>
                         <p className="mt-2 text-sm leading-6 text-slate-600">
                           Nota: los enlaces cortos como
@@ -533,34 +528,18 @@ export default function PodcastEpisodeForm({
                     </div>
                   </div>
 
-                  <Field label="ID o URL del video de TikTok *" error={errors.embedUrl}>
-                    <input
-                      className={inputClassName(errors.embedUrl)}
-                      value={platformVideoValue}
-                      onChange={(e) => {
-                        setPlatformVideoValue(e.target.value.trim());
-                        setErrors((prev) => ({
-                          ...prev,
-                          embedUrl: undefined,
-                          externalUrl: undefined,
-                        }));
-                      }}
-                      placeholder="Ej. 7491234567890123456 o https://www.tiktok.com/@usuario/video/..."
-                    />
-                  </Field>
-
-                  <Field label="URL externa" error={errors.externalUrl}>
+                  <Field label="URL pública de TikTok *" error={errors.externalUrl}>
                     <input
                       className={inputClassName(errors.externalUrl)}
                       value={values.externalUrl}
                       onChange={(e) => handleChange("externalUrl", e.target.value)}
-                      placeholder="Pega aquí la URL real del video si la tienes"
+                      placeholder="https://www.tiktok.com/@usuario/video/..."
                     />
                   </Field>
 
                   <Field label="Ruta embebida generada" error={errors.embedUrl}>
                     <div className="rounded-[18px] border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm text-slate-700">
-                      {generatedPlatformUrls.embedUrl || "Se generará automáticamente"}
+                      {generatedPlatformUrls.embedUrl || "Se generará automáticamente cuando la URL incluya /video/{id}"}
                     </div>
                   </Field>
 
@@ -569,9 +548,14 @@ export default function PodcastEpisodeForm({
                       className={inputClassName(errors.thumbnailUrl)}
                       value={values.thumbnailUrl}
                       onChange={(e) => handleChange("thumbnailUrl", e.target.value)}
-                      placeholder="https://..."
+                      placeholder="Si lo dejas vacío, el backend intentará obtenerlo automáticamente"
                     />
                   </Field>
+
+                  <p className="text-xs leading-6 text-slate-500">
+                    Si dejas el título o el thumbnail vacíos, el backend intentará completarlos
+                    automáticamente desde oEmbed de TikTok usando la URL pública del video.
+                  </p>
                 </>
               ) : (
                 <>
@@ -607,9 +591,10 @@ export default function PodcastEpisodeForm({
               <div className="flex items-start gap-3 rounded-[18px] border border-dashed border-[#e6d9c2] bg-[#fbf7ef] px-4 py-4 text-sm text-slate-600">
                 <ImageIcon className="mt-0.5 h-4 w-4 shrink-0 text-[#b78b32]" />
                 <p>
-                  Para YouTube solo necesitas pegar el ID final del video. Para TikTok puedes usar
-                  el ID numérico o la URL real del video. Para otras plataformas puedes seguir
-                  usando URLs completas de forma manual.
+                  Para YouTube solo necesitas pegar el ID final del video. Para TikTok pega la URL
+                  pública del video: si dejas la miniatura vacía, el backend la obtiene
+                  automáticamente desde oEmbed. Para otras plataformas puedes seguir usando URLs
+                  completas de forma manual.
                 </p>
               </div>
             </div>

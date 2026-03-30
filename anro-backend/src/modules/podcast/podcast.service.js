@@ -1,5 +1,6 @@
 const prisma = require("../../config/prisma");
 const slugify = require("slugify");
+const { enrichTikTokEpisodeData } = require("./tiktok-oembed.service");
 
 const buildUniqueSlug = async (title) => {
   const baseSlug = slugify(title, { lower: true, strict: true });
@@ -51,51 +52,63 @@ const getAdminEpisodeById = async (id) => {
 };
 
 const createEpisode = async (data) => {
-  const slug = await buildUniqueSlug(data.title);
+  const enrichedData = await enrichTikTokEpisodeData(data, "create");
+
+  if (!enrichedData.title || !enrichedData.title.trim()) {
+    throw new Error("El título es obligatorio");
+  }
+
+  const slug = await buildUniqueSlug(enrichedData.title);
 
   return prisma.podcastEpisode.create({
     data: {
-      title: data.title,
+      title: enrichedData.title,
       slug,
-      shortDescription: data.shortDescription || null,
-      fullDescription: data.fullDescription || null,
-      contentType: data.contentType || "EPISODE",
-      platform: data.platform || "YOUTUBE",
-      externalUrl: data.externalUrl || null,
-      embedUrl: data.embedUrl || null,
-      thumbnailUrl: data.thumbnailUrl || null,
-      episodeNumber: data.episodeNumber ? Number(data.episodeNumber) : null,
-      seasonNumber: data.seasonNumber ? Number(data.seasonNumber) : null,
-      duration: data.duration || null,
-      guests: data.guests || null,
-      publishedAt: data.publishedAt ? new Date(data.publishedAt) : null,
-      status: data.status || "DRAFT",
-      isFeatured: data.isFeatured ?? false,
-      displayOrder: data.displayOrder ? Number(data.displayOrder) : 0,
+      shortDescription: enrichedData.shortDescription || null,
+      fullDescription: enrichedData.fullDescription || null,
+      contentType: enrichedData.contentType || "EPISODE",
+      platform: enrichedData.platform || "YOUTUBE",
+      externalUrl: enrichedData.externalUrl || null,
+      embedUrl: enrichedData.embedUrl || null,
+      thumbnailUrl: enrichedData.thumbnailUrl || null,
+      episodeNumber: enrichedData.episodeNumber ? Number(enrichedData.episodeNumber) : null,
+      seasonNumber: enrichedData.seasonNumber ? Number(enrichedData.seasonNumber) : null,
+      duration: enrichedData.duration || null,
+      guests: enrichedData.guests || null,
+      publishedAt: enrichedData.publishedAt ? new Date(enrichedData.publishedAt) : null,
+      status: enrichedData.status || "DRAFT",
+      isFeatured: enrichedData.isFeatured ?? false,
+      displayOrder: enrichedData.displayOrder ? Number(enrichedData.displayOrder) : 0,
     },
   });
 };
 
 const updateEpisode = async (id, data) => {
+  const enrichedData = await enrichTikTokEpisodeData(data, "update");
+
+  if (!enrichedData.title || !enrichedData.title.trim()) {
+    throw new Error("El título es obligatorio");
+  }
+
   return prisma.podcastEpisode.update({
     where: { id },
     data: {
-      title: data.title,
-      shortDescription: data.shortDescription || null,
-      fullDescription: data.fullDescription || null,
-      contentType: data.contentType || "EPISODE",
-      platform: data.platform || "YOUTUBE",
-      externalUrl: data.externalUrl || null,
-      embedUrl: data.embedUrl || null,
-      thumbnailUrl: data.thumbnailUrl || null,
-      episodeNumber: data.episodeNumber ? Number(data.episodeNumber) : null,
-      seasonNumber: data.seasonNumber ? Number(data.seasonNumber) : null,
-      duration: data.duration || null,
-      guests: data.guests || null,
-      publishedAt: data.publishedAt ? new Date(data.publishedAt) : null,
-      status: data.status || "DRAFT",
-      isFeatured: data.isFeatured ?? false,
-      displayOrder: data.displayOrder ? Number(data.displayOrder) : 0,
+      title: enrichedData.title,
+      shortDescription: enrichedData.shortDescription || null,
+      fullDescription: enrichedData.fullDescription || null,
+      contentType: enrichedData.contentType || "EPISODE",
+      platform: enrichedData.platform || "YOUTUBE",
+      externalUrl: enrichedData.externalUrl || null,
+      embedUrl: enrichedData.embedUrl || null,
+      thumbnailUrl: enrichedData.thumbnailUrl || null,
+      episodeNumber: enrichedData.episodeNumber ? Number(enrichedData.episodeNumber) : null,
+      seasonNumber: enrichedData.seasonNumber ? Number(enrichedData.seasonNumber) : null,
+      duration: enrichedData.duration || null,
+      guests: enrichedData.guests || null,
+      publishedAt: enrichedData.publishedAt ? new Date(enrichedData.publishedAt) : null,
+      status: enrichedData.status || "DRAFT",
+      isFeatured: enrichedData.isFeatured ?? false,
+      displayOrder: enrichedData.displayOrder ? Number(enrichedData.displayOrder) : 0,
     },
   });
 };
