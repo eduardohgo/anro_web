@@ -49,10 +49,6 @@ const getAdminEpisodeById = async (req, res) => {
 
 const createEpisode = async (req, res) => {
   try {
-    if (!req.body.title) {
-      return res.status(400).json({ message: "El título es obligatorio" });
-    }
-
     const episode = await podcastService.createEpisode(req.body);
     return res.status(201).json(episode);
   } catch (error) {
