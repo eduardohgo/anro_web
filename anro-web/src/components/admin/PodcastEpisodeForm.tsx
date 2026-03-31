@@ -553,8 +553,8 @@ export default function PodcastEpisodeForm({
                   </Field>
 
                   <p className="text-xs leading-6 text-slate-500">
-                    Si dejas el título o el thumbnail vacíos, el backend intentará completarlos
-                    automáticamente desde oEmbed de TikTok usando la URL pública del video.
+                    No necesitas subir miniatura manual: si dejas el campo vacío, el backend la
+                    obtiene automáticamente desde oEmbed de TikTok con la URL pública del video.
                   </p>
                 </>
               ) : (
