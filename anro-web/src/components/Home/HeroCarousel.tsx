@@ -2,26 +2,30 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { MapPinIcon } from "@heroicons/react/24/outline";
-
-type Slide = {
-  src: string;
-  alt: string;
-};
+import {
+  DEFAULT_HOME_CONTENT,
+  HOME_CONTENT_STORAGE_KEY,
+  HomeHeroSlide,
+  parseStoredHomeContent,
+} from "@/lib/home-content";
 
 export default function HeroCarousel() {
-  const slides: Slide[] = useMemo(
-    () => [
-      { src: "/fraccionamiento/carrusel1.jpg", alt: "Fraccionamiento - imagen 1" },
-      { src: "/fraccionamiento/carrusel2.jpg", alt: "Fraccionamiento - imagen 2" },
-      { src: "/fraccionamiento/carrusel3.jpg", alt: "Fraccionamiento - imagen 3" },
-      { src: "/fraccionamiento/carrusel4.jpg", alt: "Fraccionamiento - imagen 4" },
-    ],
-    []
-  );
-
+  const [slides, setSlides] = useState<HomeHeroSlide[]>(DEFAULT_HOME_CONTENT.heroSlides);
   const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const applyContent = () => {
+      const config = parseStoredHomeContent(window.localStorage.getItem(HOME_CONTENT_STORAGE_KEY));
+      setSlides(config.heroSlides);
+      setIndex((current) => (current >= config.heroSlides.length ? 0 : current));
+    };
+
+    applyContent();
+    window.addEventListener("storage", applyContent);
+    return () => window.removeEventListener("storage", applyContent);
+  }, []);
 
   useEffect(() => {
     const id = window.setInterval(() => {

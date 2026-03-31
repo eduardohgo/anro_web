@@ -1,8 +1,29 @@
+"use client";
+
 import HeroCarousel from "@/components/Home/HeroCarousel";
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import {
+  DEFAULT_HOME_CONTENT,
+  HOME_CONTENT_STORAGE_KEY,
+  HomeContentConfig,
+  parseStoredHomeContent,
+} from "@/lib/home-content";
 
 export default function HomePage() {
+  const [homeContent, setHomeContent] = useState<HomeContentConfig>(DEFAULT_HOME_CONTENT);
+
+  useEffect(() => {
+    const sync = () => {
+      setHomeContent(parseStoredHomeContent(window.localStorage.getItem(HOME_CONTENT_STORAGE_KEY)));
+    };
+
+    sync();
+    window.addEventListener("storage", sync);
+    return () => window.removeEventListener("storage", sync);
+  }, []);
+
   return (
     <>
       {/* HERO - Full width con card de datos rápidos incluida */}
@@ -17,7 +38,7 @@ export default function HomePage() {
     {/* Fondo visual */}
     <div
       className="absolute inset-0 bg-cover bg-center opacity-85"
-      style={{ backgroundImage: "url('/fraccionamiento/carrusel3.jpg')" }}
+      style={{ backgroundImage: `url('${homeContent.desarrolloCards[2]?.image || '/fraccionamiento/carrusel3.jpg'}')` }}
     />
     <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,253,249,0.28)_0%,rgba(255,253,249,0.18)_100%)]" />
 
@@ -43,8 +64,8 @@ export default function HomePage() {
           <div className="group relative z-10 overflow-hidden rounded-[24px] border border-black/8 bg-[#fffdf9]/95 shadow-[0_12px_28px_rgba(0,0,0,0.08)] transition duration-300 hover:z-20 hover:scale-[1.14] hover:shadow-xl">
             <div className="relative h-[240px] w-full overflow-hidden md:h-[270px]">
               <Image
-                src="/fraccionamiento/primeraEtapa.jpg"
-                alt="Primera etapa"
+                src={homeContent.desarrolloCards[0]?.image || "/fraccionamiento/primeraEtapa.jpg"}
+                alt={homeContent.desarrolloCards[0]?.title || "Primera etapa"}
                 fill
                 className="object-cover transition duration-500 group-hover:scale-105"
               />
@@ -53,7 +74,7 @@ export default function HomePage() {
               <div className="flex items-center gap-2">
                 <span className="h-2.5 w-2.5 rounded-full bg-[#d4a62a]" />
                 <h3 className="text-[15px] font-bold text-[#1f1a17] md:text-[18px]">
-                  Primera etapa
+                  {homeContent.desarrolloCards[0]?.title || "Primera etapa"}
                 </h3>
               </div>
             </div>
@@ -63,8 +84,8 @@ export default function HomePage() {
           <div className="group relative z-10 overflow-hidden rounded-[24px] border border-black/8 bg-[#fffdf9]/95 shadow-[0_12px_28px_rgba(0,0,0,0.08)] transition duration-300 hover:z-20 hover:scale-[1.14] hover:shadow-xl">
             <div className="relative h-[240px] w-full overflow-hidden md:h-[270px]">
               <Image
-                src="/fraccionamiento/carrusel2.jpg"
-                alt="Segunda etapa"
+                src={homeContent.desarrolloCards[1]?.image || "/fraccionamiento/carrusel2.jpg"}
+                alt={homeContent.desarrolloCards[1]?.title || "Segunda etapa"}
                 fill
                 className="object-cover transition duration-500 group-hover:scale-105"
               />
@@ -73,7 +94,7 @@ export default function HomePage() {
               <div className="flex items-center gap-2">
                 <span className="h-2.5 w-2.5 rounded-full bg-[#d4a62a]" />
                 <h3 className="text-[15px] font-bold text-[#1f1a17] md:text-[18px]">
-                  Segunda etapa
+                  {homeContent.desarrolloCards[1]?.title || "Segunda etapa"}
                 </h3>
               </div>
             </div>
@@ -82,14 +103,11 @@ export default function HomePage() {
           {/* Card 3 */}
           <div className="relative z-0 overflow-hidden rounded-[30px] border border-black/8 bg-white shadow-[0_20px_50px_rgba(15,23,42,0.10)] transition-all duration-500 hover:z-30 hover:scale-[1.14] hover:shadow-[0_35px_90px_rgba(15,23,42,0.28)]">
             <div className="relative h-[240px] w-full overflow-hidden md:h-[270px]">
-              <video
-                src="/fraccionamiento/recorrido-virtual.mp4"
-                autoPlay
-                muted
-                loop
-                playsInline
-                preload="auto"
-                className="h-full w-full object-cover"
+              <Image
+                src={homeContent.desarrolloCards[2]?.image || "/fraccionamiento/carrusel3.jpg"}
+                alt={homeContent.desarrolloCards[2]?.title || "Recorrido virtual"}
+                fill
+                className="object-cover"
               />
             </div>
 
@@ -97,7 +115,7 @@ export default function HomePage() {
               <div className="flex items-center gap-2">
                 <span className="h-2.5 w-2.5 rounded-full bg-[#d4a62a]" />
                 <p className="text-[15px] font-bold text-[#1f1a17] md:text-[18px]">
-                  Recorrido virtual
+                  {homeContent.desarrolloCards[2]?.title || "Recorrido virtual"}
                 </p>
               </div>
             </div>
@@ -111,11 +129,11 @@ export default function HomePage() {
           <ul className="space-y-4 text-xl font-medium text-[#2f2824]">
             <li className="flex items-center gap-3">
               <span className="h-2.5 w-2.5 rounded-full bg-[#d4a62a]" />
-              Primera etapa
+              {homeContent.desarrolloCards[0]?.title || "Primera etapa"}
             </li>
             <li className="flex items-center gap-3">
               <span className="h-2.5 w-2.5 rounded-full bg-[#d4a62a]" />
-              Segunda etapa / ampliación
+              {homeContent.desarrolloCards[1]?.title || "Segunda etapa / ampliación"}
             </li>
             <li className="flex items-center gap-3">
               <span className="h-2.5 w-2.5 rounded-full bg-[#d4a62a]" />
@@ -123,7 +141,7 @@ export default function HomePage() {
             </li>
             <li className="flex items-center gap-3">
               <span className="h-2.5 w-2.5 rounded-full bg-[#d4a62a]" />
-              Recorrido virtual
+              {homeContent.desarrolloCards[2]?.title || "Recorrido virtual"}
             </li>
           </ul>
 
@@ -170,89 +188,25 @@ export default function HomePage() {
           </div>
 
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-            {/* Card 1 */}
-            <div className="group overflow-hidden rounded-[28px] border border-black/8 bg-[#fffdf9] shadow-[0_12px_30px_rgba(0,0,0,0.06)] transition duration-300 hover:-translate-y-1 hover:shadow-xl">
-              <div className="relative h-52 w-full overflow-hidden">
-                <Image
-                  src="/fraccionamiento/desarrolloInmobilario.png"
-                  alt="Desarrollo inmobiliario"
-                  fill
-                  className="object-cover transition duration-500 group-hover:scale-105"
-                />
+            {homeContent.serviceCards.map((service) => (
+              <div
+                key={service.id}
+                className="group overflow-hidden rounded-[28px] border border-black/8 bg-[#fffdf9] shadow-[0_12px_30px_rgba(0,0,0,0.06)] transition duration-300 hover:-translate-y-1 hover:shadow-xl"
+              >
+                <div className="relative h-52 w-full overflow-hidden">
+                  <Image
+                    src={service.image}
+                    alt={service.title}
+                    fill
+                    className="object-cover transition duration-500 group-hover:scale-105"
+                  />
+                </div>
+                <div className="p-6">
+                  <h3 className="text-2xl font-bold leading-tight text-[#1f1a17]">{service.title}</h3>
+                  <p className="mt-3 text-base leading-relaxed text-[#5f5650]">{service.description}</p>
+                </div>
               </div>
-              <div className="p-6">
-                <h3 className="text-2xl font-bold leading-tight text-[#1f1a17]">
-                  Desarrollo Inmobiliario
-                </h3>
-                <p className="mt-3 text-base leading-relaxed text-[#5f5650]">
-                  Planeación y ejecución de proyectos inmobiliarios con visión de crecimiento,
-                  orden y plusvalía.
-                </p>
-              </div>
-            </div>
-
-            {/* Card 2 */}
-            <div className="group overflow-hidden rounded-[28px] border border-black/8 bg-[#fffdf9] shadow-[0_12px_30px_rgba(0,0,0,0.06)] transition duration-300 hover:-translate-y-1 hover:shadow-xl">
-              <div className="relative h-52 w-full overflow-hidden">
-                <Image
-                  src="/fraccionamiento/carrusel1.jpg"
-                  alt="Compra, venta y renta"
-                  fill
-                  className="object-cover transition duration-500 group-hover:scale-105"
-                />
-              </div>
-              <div className="p-6">
-                <h3 className="text-2xl font-bold leading-tight text-[#1f1a17]">
-                  Compra, Venta y Renta
-                </h3>
-                <p className="mt-3 text-base leading-relaxed text-[#5f5650]">
-                  Acompañamiento en operaciones de bienes raíces, con atención clara y
-                  enfoque en las necesidades del cliente.
-                </p>
-              </div>
-            </div>
-
-            {/* Card 3 */}
-            <div className="group overflow-hidden rounded-[28px] border border-black/8 bg-[#fffdf9] shadow-[0_12px_30px_rgba(0,0,0,0.06)] transition duration-300 hover:-translate-y-1 hover:shadow-xl">
-              <div className="relative h-52 w-full overflow-hidden">
-                <Image
-                  src="/fraccionamiento/arrendamientoMaquinaria.jpg"
-                  alt="Arrendamiento de maquinaria"
-                  fill
-                  className="object-cover transition duration-500 group-hover:scale-105"
-                />
-              </div>
-              <div className="p-6">
-                <h3 className="text-2xl font-bold leading-tight text-[#1f1a17]">
-                  Arrendamiento de Maquinaria
-                </h3>
-                <p className="mt-3 text-base leading-relaxed text-[#5f5650]">
-                  Maquinaria ligera y pesada para obras y proyectos, orientada a facilitar
-                  el trabajo en campo y construcción.
-                </p>
-              </div>
-            </div>
-
-            {/* Card 4 */}
-            <div className="group overflow-hidden rounded-[28px] border border-black/8 bg-[#fffdf9] shadow-[0_12px_30px_rgba(0,0,0,0.06)] transition duration-300 hover:-translate-y-1 hover:shadow-xl">
-              <div className="relative h-52 w-full overflow-hidden">
-                <Image
-                  src="/fraccionamiento/construccionObras.jpg"
-                  alt="Construcción de obras"
-                  fill
-                  className="object-cover transition duration-500 group-hover:scale-105"
-                />
-              </div>
-              <div className="p-6">
-                <h3 className="text-2xl font-bold leading-tight text-[#1f1a17]">
-                  Construcción de Obras
-                </h3>
-                <p className="mt-3 text-base leading-relaxed text-[#5f5650]">
-                  Desarrollo de obras públicas y privadas con enfoque en calidad,
-                  cumplimiento y funcionalidad.
-                </p>
-              </div>
-            </div>
+            ))}
           </div>
         </section>
 
