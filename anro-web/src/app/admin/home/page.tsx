@@ -1,10 +1,5 @@
-import AdminModulePlaceholder from "@/components/admin/AdminModulePlaceholder";
+import HomeAdminClient from "@/components/admin/HomeAdminClient";
 
 export default function AdminHomePage() {
-  return (
-    <AdminModulePlaceholder
-      title="Administración de Home"
-      description="Desde aquí podrás editar hero, bloques destacados y llamadas a la acción del inicio público de ANRO."
-    />
-  );
+  return <HomeAdminClient />;
 }
