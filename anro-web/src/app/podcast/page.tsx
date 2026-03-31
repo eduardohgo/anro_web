@@ -11,7 +11,6 @@ import {
   Mic2,
   Play,
   PlayCircle,
-  Search,
   Sparkles,
   Star,
   X,
@@ -99,7 +98,6 @@ function buildTikTokEmbedUrl(episode: PodcastEpisode) {
   const id = extractTikTokId(episode.externalUrl);
   if (!id) return null;
 
-  // Formato oficial recomendado por TikTok Embed Player.
   return `https://www.tiktok.com/player/v1/${id}`;
 }
 
@@ -173,6 +171,50 @@ function getEpisodeThumbnailUrl(episode: PodcastEpisode) {
   }
 
   return episode.thumbnailUrl?.trim() || null;
+}
+
+function getEpisodeSeason(episode: PodcastEpisode) {
+  const possibleSeason =
+    (episode as PodcastEpisode & { season?: number | string }).season ??
+    (episode as PodcastEpisode & { temporada?: number | string }).temporada;
+
+  if (
+    possibleSeason !== undefined &&
+    possibleSeason !== null &&
+    `${possibleSeason}`.trim()
+  ) {
+    return `${possibleSeason}`.trim();
+  }
+
+  const title = episode.title || "";
+  const shortDescription = episode.shortDescription || "";
+  const fullDescription = episode.fullDescription || "";
+  const combined = `${title} ${shortDescription} ${fullDescription}`;
+
+  const match =
+    combined.match(/temporada\s*(\d+)/i) ||
+    combined.match(/\bseason\s*(\d+)/i) ||
+    combined.match(/\bT\s*(\d+)\b/i);
+
+  return match?.[1] || null;
+}
+
+function hasEpisodeGuests(episode: PodcastEpisode) {
+  const guestsValue = (episode.guests || "").trim().toLowerCase();
+
+  if (!guestsValue) return false;
+
+  const emptyLabels = [
+    "sin invitados",
+    "ninguno",
+    "ninguna",
+    "no",
+    "n/a",
+    "na",
+    "por definir",
+  ];
+
+  return !emptyLabels.includes(guestsValue);
 }
 
 function EpisodeMedia({
@@ -449,10 +491,14 @@ export default function PodcastPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedEpisode, setSelectedEpisode] = useState<PodcastEpisode | null>(null);
 
-  const [searchTerm, setSearchTerm] = useState("");
   const [platformFilter, setPlatformFilter] = useState<"ALL" | "YOUTUBE" | "TIKTOK" | "OTHER">(
     "ALL"
   );
+  const [sortFilter, setSortFilter] = useState<"RECENT" | "OLDEST">("RECENT");
+  const [seasonFilter, setSeasonFilter] = useState<string>("ALL");
+  const [guestFilter, setGuestFilter] = useState<
+    "ALL" | "WITH_GUESTS" | "WITHOUT_GUESTS"
+  >("ALL");
 
   useEffect(() => {
     let isMounted = true;
@@ -500,28 +546,43 @@ export default function PodcastPage() {
   const mainFeatured = featuredEpisodes[0] ?? null;
   const secondaryFeatured = featuredEpisodes[1] ?? null;
 
-  const filteredPublishedEpisodes = useMemo(() => {
-    const normalizedSearch = searchTerm.trim().toLowerCase();
+  const availableSeasons = useMemo(() => {
+    const seasons = Array.from(
+      new Set(
+        publishedEpisodes
+          .map((episode) => getEpisodeSeason(episode))
+          .filter((value): value is string => Boolean(value))
+      )
+    );
 
+    return seasons.sort((a, b) => Number(a) - Number(b));
+  }, [publishedEpisodes]);
+
+  const filteredPublishedEpisodes = useMemo(() => {
     return [...publishedEpisodes]
       .filter((episode) => {
-        const matchesSearch =
-          !normalizedSearch ||
-          episode.title.toLowerCase().includes(normalizedSearch) ||
-          (episode.shortDescription || "").toLowerCase().includes(normalizedSearch) ||
-          (episode.fullDescription || "").toLowerCase().includes(normalizedSearch);
-
         const matchesPlatform =
           platformFilter === "ALL" || episode.platform === platformFilter;
 
-        return matchesSearch && matchesPlatform;
+        const episodeSeason = getEpisodeSeason(episode);
+        const matchesSeason = seasonFilter === "ALL" || episodeSeason === seasonFilter;
+
+        const hasGuests = hasEpisodeGuests(episode);
+        const matchesGuests =
+          guestFilter === "ALL" ||
+          (guestFilter === "WITH_GUESTS" && hasGuests) ||
+          (guestFilter === "WITHOUT_GUESTS" && !hasGuests);
+
+        return matchesPlatform && matchesSeason && matchesGuests;
       })
       .sort((a, b) => {
         const aDate = new Date(a.publishedAt || a.createdAt).getTime();
         const bDate = new Date(b.publishedAt || b.createdAt).getTime();
+
+        if (sortFilter === "OLDEST") return aDate - bDate;
         return bDate - aDate;
       });
-  }, [publishedEpisodes, platformFilter, searchTerm]);
+  }, [publishedEpisodes, platformFilter, seasonFilter, guestFilter, sortFilter]);
 
   return (
     <>
@@ -784,8 +845,8 @@ export default function PodcastPage() {
                   Todos los episodios publicados
                 </h2>
                 <p className="mt-3 max-w-2xl text-sm leading-7 text-[#67584B]">
-                  Aquí aparecen todos los episodios publicados. Puedes filtrarlos por texto o por
-                  plataforma.
+                  Aquí aparecen todos los episodios publicados. Puedes filtrarlos por plataforma,
+                  temporada, invitados y orden de publicación.
                 </p>
               </div>
 
@@ -798,23 +859,63 @@ export default function PodcastPage() {
               </div>
             </div>
 
-            <div className="mt-8 rounded-[24px] border border-[#E7DFD2] bg-[#F9F6F0] p-4">
-              <div className="grid gap-4 lg:grid-cols-[1.4fr_0.6fr]">
+            <div className="mt-8 rounded-[24px] border border-[#E7DFD2] bg-[#F9F6F0] p-4 md:p-5">
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <label className="block">
-                  <span className="mb-2 block text-sm font-medium text-[#5B4E43]">Buscar</span>
-                  <div className="relative">
-                    <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8B7B69]" />
-                    <input
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      placeholder="Buscar por título o descripción..."
-                      className="w-full rounded-[18px] border border-[#DED5C8] bg-white px-11 py-3.5 text-sm text-[#221B18] outline-none transition focus:border-[#C79A2C] focus:ring-4 focus:ring-[rgba(199,154,44,0.12)]"
-                    />
-                  </div>
+                  <span className="mb-2 block text-sm font-medium text-[#5B4E43]">
+                    Ordenar por
+                  </span>
+                  <select
+                    value={sortFilter}
+                    onChange={(e) => setSortFilter(e.target.value as "RECENT" | "OLDEST")}
+                    className="w-full rounded-[18px] border border-[#DED5C8] bg-white px-4 py-3.5 text-sm text-[#221B18] outline-none transition focus:border-[#C79A2C] focus:ring-4 focus:ring-[rgba(199,154,44,0.12)]"
+                  >
+                    <option value="RECENT">Más recientes</option>
+                    <option value="OLDEST">Más antiguos</option>
+                  </select>
                 </label>
 
                 <label className="block">
-                  <span className="mb-2 block text-sm font-medium text-[#5B4E43]">Plataforma</span>
+                  <span className="mb-2 block text-sm font-medium text-[#5B4E43]">
+                    Temporada
+                  </span>
+                  <select
+                    value={seasonFilter}
+                    onChange={(e) => setSeasonFilter(e.target.value)}
+                    className="w-full rounded-[18px] border border-[#DED5C8] bg-white px-4 py-3.5 text-sm text-[#221B18] outline-none transition focus:border-[#C79A2C] focus:ring-4 focus:ring-[rgba(199,154,44,0.12)]"
+                  >
+                    <option value="ALL">Todas</option>
+                    {availableSeasons.map((season) => (
+                      <option key={season} value={season}>
+                        Temporada {season}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-sm font-medium text-[#5B4E43]">
+                    Invitados
+                  </span>
+                  <select
+                    value={guestFilter}
+                    onChange={(e) =>
+                      setGuestFilter(
+                        e.target.value as "ALL" | "WITH_GUESTS" | "WITHOUT_GUESTS"
+                      )
+                    }
+                    className="w-full rounded-[18px] border border-[#DED5C8] bg-white px-4 py-3.5 text-sm text-[#221B18] outline-none transition focus:border-[#C79A2C] focus:ring-4 focus:ring-[rgba(199,154,44,0.12)]"
+                  >
+                    <option value="ALL">Todos</option>
+                    <option value="WITH_GUESTS">Con invitados</option>
+                    <option value="WITHOUT_GUESTS">Sin invitados</option>
+                  </select>
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-sm font-medium text-[#5B4E43]">
+                    Plataforma
+                  </span>
                   <select
                     value={platformFilter}
                     onChange={(e) =>
