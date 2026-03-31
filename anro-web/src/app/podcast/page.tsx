@@ -63,6 +63,46 @@ function extractYouTubeId(value: string | null | undefined) {
   }
 }
 
+function extractTikTokId(value: string | null | undefined) {
+  if (!value) return null;
+
+  const raw = value.trim();
+  if (!raw) return null;
+
+  const directIdMatch = raw.match(/^\d{8,25}$/);
+  if (directIdMatch) return directIdMatch[0];
+
+  try {
+    const parsed = new URL(raw);
+    const match = parsed.pathname.match(/\/video\/(\d{8,25})/);
+    if (match?.[1]) return match[1];
+
+    if (parsed.pathname.includes("/embed/v2/")) {
+      const embedMatch = parsed.pathname.match(/\/embed\/v2\/(\d{8,25})/);
+      if (embedMatch?.[1]) return embedMatch[1];
+    }
+
+    if (parsed.pathname.includes("/player/v1/")) {
+      const playerMatch = parsed.pathname.match(/\/player\/v1\/(\d{8,25})/);
+      if (playerMatch?.[1]) return playerMatch[1];
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function buildTikTokEmbedUrl(episode: PodcastEpisode) {
+  if (episode.embedUrl?.trim()) return episode.embedUrl.trim();
+
+  const id = extractTikTokId(episode.externalUrl);
+  if (!id) return null;
+
+  // Formato oficial recomendado por TikTok Embed Player.
+  return `https://www.tiktok.com/player/v1/${id}`;
+}
+
 function buildYouTubeEmbedUrl(episode: PodcastEpisode) {
   const fromEmbed = normalizeEmbedUrl(episode.embedUrl, episode.externalUrl);
   if (fromEmbed) return fromEmbed;
@@ -121,7 +161,7 @@ function getEpisodeEmbedUrl(episode: PodcastEpisode) {
   }
 
   if (episode.platform === "TIKTOK") {
-    return episode.embedUrl?.trim() || null;
+    return buildTikTokEmbedUrl(episode);
   }
 
   return normalizeEmbedUrl(episode.embedUrl, episode.externalUrl);
@@ -280,8 +320,21 @@ function VideoModal({
 
           {isTikTok ? (
             <div className="grid gap-5 md:grid-cols-[0.95fr_1.05fr]">
-              <div className="overflow-hidden rounded-[26px] border border-[#DDD3C2] bg-[#EFE7DA] shadow-sm">
-                {thumbnailUrl ? (
+              <div className="overflow-hidden rounded-[26px] border border-[#DDD3C2] bg-black shadow-sm">
+                {embedUrl ? (
+                  <iframe
+                    src={
+                      embedUrl.includes("?")
+                        ? `${embedUrl}&autoplay=1`
+                        : `${embedUrl}?autoplay=1`
+                    }
+                    title={episode.title}
+                    className="h-full min-h-[520px] w-full"
+                    allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                    allowFullScreen
+                    referrerPolicy="strict-origin-when-cross-origin"
+                  />
+                ) : thumbnailUrl ? (
                   <img
                     src={thumbnailUrl}
                     alt={episode.title}
@@ -321,7 +374,7 @@ function VideoModal({
                 <div className="mt-6">
                   {episode.externalUrl || embedUrl ? (
                     <Link
-                      href={episode.externalUrl || embedUrl || "#"}
+                      href={episode.externalUrl || "#"}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center justify-center gap-2 rounded-full bg-[#16233A] px-6 py-3 text-sm font-semibold text-[#F7F3EC] transition hover:bg-[#1D2F4D]"
