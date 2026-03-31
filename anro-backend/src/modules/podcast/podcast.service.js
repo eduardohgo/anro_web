@@ -2,6 +2,31 @@ const prisma = require("../../config/prisma");
 const slugify = require("slugify");
 const { enrichTikTokEpisodeData } = require("./tiktok-oembed.service");
 
+const toNullableTrimmedString = (value) => {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+};
+
+const buildEpisodeWriteData = (data) => ({
+  title: data.title?.trim(),
+  shortDescription: toNullableTrimmedString(data.shortDescription),
+  fullDescription: toNullableTrimmedString(data.fullDescription),
+  contentType: data.contentType || "EPISODE",
+  platform: data.platform || "YOUTUBE",
+  externalUrl: toNullableTrimmedString(data.externalUrl),
+  embedUrl: toNullableTrimmedString(data.embedUrl),
+  thumbnailUrl: toNullableTrimmedString(data.thumbnailUrl),
+  episodeNumber: data.episodeNumber ? Number(data.episodeNumber) : null,
+  seasonNumber: data.seasonNumber ? Number(data.seasonNumber) : null,
+  duration: toNullableTrimmedString(data.duration),
+  guests: toNullableTrimmedString(data.guests),
+  publishedAt: data.publishedAt ? new Date(data.publishedAt) : null,
+  status: data.status || "DRAFT",
+  isFeatured: data.isFeatured ?? false,
+  displayOrder: data.displayOrder ? Number(data.displayOrder) : 0,
+});
+
 const buildUniqueSlug = async (title) => {
   const baseSlug = slugify(title, { lower: true, strict: true });
   let slug = baseSlug;
@@ -60,27 +85,22 @@ const createEpisode = async (data) => {
 
   const slug = await buildUniqueSlug(enrichedData.title);
 
-  return prisma.podcastEpisode.create({
-    data: {
-      title: enrichedData.title,
-      slug,
-      shortDescription: enrichedData.shortDescription || null,
-      fullDescription: enrichedData.fullDescription || null,
-      contentType: enrichedData.contentType || "EPISODE",
-      platform: enrichedData.platform || "YOUTUBE",
-      externalUrl: enrichedData.externalUrl || null,
-      embedUrl: enrichedData.embedUrl || null,
-      thumbnailUrl: enrichedData.thumbnailUrl || null,
-      episodeNumber: enrichedData.episodeNumber ? Number(enrichedData.episodeNumber) : null,
-      seasonNumber: enrichedData.seasonNumber ? Number(enrichedData.seasonNumber) : null,
-      duration: enrichedData.duration || null,
-      guests: enrichedData.guests || null,
-      publishedAt: enrichedData.publishedAt ? new Date(enrichedData.publishedAt) : null,
-      status: enrichedData.status || "DRAFT",
-      isFeatured: enrichedData.isFeatured ?? false,
-      displayOrder: enrichedData.displayOrder ? Number(enrichedData.displayOrder) : 0,
-    },
+  const createData = {
+    ...buildEpisodeWriteData(enrichedData),
+    slug,
+  };
+
+  const episode = await prisma.podcastEpisode.create({ data: createData });
+
+  console.info("[Podcast][create] Episodio guardado.", {
+    id: episode.id,
+    platform: episode.platform,
+    externalUrl: episode.externalUrl,
+    thumbnailUrl: episode.thumbnailUrl,
+    thumbnailPersisted: Boolean(episode.thumbnailUrl),
   });
+
+  return episode;
 };
 
 const updateEpisode = async (id, data) => {
@@ -90,27 +110,21 @@ const updateEpisode = async (id, data) => {
     throw new Error("El título es obligatorio");
   }
 
-  return prisma.podcastEpisode.update({
+  const updateData = buildEpisodeWriteData(enrichedData);
+  const episode = await prisma.podcastEpisode.update({
     where: { id },
-    data: {
-      title: enrichedData.title,
-      shortDescription: enrichedData.shortDescription || null,
-      fullDescription: enrichedData.fullDescription || null,
-      contentType: enrichedData.contentType || "EPISODE",
-      platform: enrichedData.platform || "YOUTUBE",
-      externalUrl: enrichedData.externalUrl || null,
-      embedUrl: enrichedData.embedUrl || null,
-      thumbnailUrl: enrichedData.thumbnailUrl || null,
-      episodeNumber: enrichedData.episodeNumber ? Number(enrichedData.episodeNumber) : null,
-      seasonNumber: enrichedData.seasonNumber ? Number(enrichedData.seasonNumber) : null,
-      duration: enrichedData.duration || null,
-      guests: enrichedData.guests || null,
-      publishedAt: enrichedData.publishedAt ? new Date(enrichedData.publishedAt) : null,
-      status: enrichedData.status || "DRAFT",
-      isFeatured: enrichedData.isFeatured ?? false,
-      displayOrder: enrichedData.displayOrder ? Number(enrichedData.displayOrder) : 0,
-    },
+    data: updateData,
   });
+
+  console.info("[Podcast][update] Episodio actualizado.", {
+    id: episode.id,
+    platform: episode.platform,
+    externalUrl: episode.externalUrl,
+    thumbnailUrl: episode.thumbnailUrl,
+    thumbnailPersisted: Boolean(episode.thumbnailUrl),
+  });
+
+  return episode;
 };
 
 const deleteEpisode = async (id) => {
