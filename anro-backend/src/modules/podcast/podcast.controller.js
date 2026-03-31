@@ -3,6 +3,17 @@ const podcastService = require("./podcast.service");
 const getEpisodes = async (req, res) => {
   try {
     const episodes = await podcastService.getPublishedEpisodes();
+    const tiktokWithoutThumbnail = episodes.filter(
+      (episode) =>
+        episode.platform === "TIKTOK" &&
+        (!episode.thumbnailUrl || !episode.thumbnailUrl.trim())
+    ).length;
+
+    console.info("[Podcast][public-list] Episodios publicados listados.", {
+      total: episodes.length,
+      tiktokWithoutThumbnail,
+    });
+
     return res.status(200).json(episodes);
   } catch (error) {
     return res.status(500).json({ message: "Error al obtener episodios" });
