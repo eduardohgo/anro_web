@@ -1,15 +1,12 @@
 "use client";
 
 import {
-  BarChart3,
   CheckCircle2,
-  CircleDashed,
   Eye,
   FilePenLine,
-  Flame,
-  Headphones,
   Images,
-  Megaphone,
+  LayoutTemplate,
+  Plus,
   Power,
   Rocket,
   Sparkles,
@@ -68,11 +65,11 @@ type GenericContent = Record<string, string>;
 
 type ModuleContent = HeroContent | { slides: SlideItem[] } | DesarrolloContent | { services: ServiceItem[] } | CtaContent | GenericContent;
 
-interface HomeModule {
-  key: string;
+interface AdminModule {
+  key: ModuleKey;
   name: string;
+  publicReference: string;
   description: string;
-  status: ModuleStatus;
   icon: ComponentType<{ className?: string }>;
   content: ModuleContent;
 }
@@ -81,7 +78,9 @@ const INITIAL_HOME_MODULES: HomeModule[] = [
   {
     key: "hero",
     name: "Hero principal",
-    description: "Controla titular, subtítulo, imagen/fondo y CTA principal de apertura.",
+    publicReference: "Sección pública: Hero superior",
+    description: "Edita badge, título, descripción, botones, lista de puntos, datos rápidos y slides.",
+    icon: LayoutTemplate,
     status: "ACTIVE",
     icon: Rocket,
     content: {
@@ -160,7 +159,7 @@ const INITIAL_HOME_MODULES: HomeModule[] = [
     content: { episodio: "Episodio 18", host: "Equipo ANRO", enlace: "/podcast/18" },
   },
   {
-    key: "cta-final",
+    key: "cta",
     name: "CTA final",
     description: "Edita llamada final, mensaje de cierre y botones de conversión.",
     status: "INACTIVE",
@@ -187,11 +186,9 @@ const STATUS_META: Record<ModuleStatus, { label: string; className: string; icon
   },
 };
 
-function formatDate(value: Date) {
-  return new Intl.DateTimeFormat("es-MX", {
-    dateStyle: "long",
-    timeStyle: "short",
-  }).format(value);
+function loadInitialConfig() {
+  if (typeof window === "undefined") return DEFAULT_HOME_CONTENT;
+  return parseStoredHomeContent(window.localStorage.getItem(HOME_CONTENT_STORAGE_KEY));
 }
 
 function isSlidesContent(content: ModuleContent): content is { slides: SlideItem[] } {
@@ -293,27 +290,27 @@ export default function AdminHomePage() {
     <div className="space-y-6">
       <section className="overflow-hidden rounded-3xl border border-[#21314d] bg-[radial-gradient(circle_at_top_left,rgba(212,166,42,0.18),transparent_36%),linear-gradient(140deg,#0e1c36_0%,#142b4c_58%,#1d3d6b_100%)] px-6 py-8 text-white shadow-[0_28px_90px_rgba(10,20,40,0.18)] md:px-9 md:py-10">
         <span className="inline-flex items-center gap-2 rounded-full border border-[#f0d596]/40 bg-[#f0d596]/10 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.25em] text-[#f7db9f]">
-          <Sparkles className="h-3.5 w-3.5" />
-          Gestión premium de contenido
+          Panel alineado con Home público
         </span>
         <h1 className="mt-5 text-3xl font-semibold leading-tight md:text-5xl">Administración de Home</h1>
         <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-200 md:text-base">
-          Aquí controlas las secciones visibles del inicio público de ANRO para mantener una
-          narrativa consistente, elegante y alineada con la marca.
+          Cada módulo corresponde 1 a 1 con una sección real del Home público.
         </p>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {overviewCards.map((item) => (
-          <article
-            key={item.label}
-            className="rounded-2xl border border-[#e4dbcf] bg-[#fffdf9] p-5 shadow-[0_10px_30px_rgba(15,23,42,0.06)]"
-          >
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#aa7f28]">{item.label}</p>
-            <p className="mt-3 text-2xl font-semibold text-[#142033]">{item.value}</p>
-            <p className="mt-2 text-sm text-slate-600">{item.hint}</p>
-          </article>
-        ))}
+      <section className="grid gap-4 md:grid-cols-3">
+        <article className="rounded-2xl border border-[#e4dbcf] bg-[#fffdf9] p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#aa7f28]">Módulos</p>
+          <p className="mt-3 text-2xl font-semibold text-[#142033]">{modules.length}</p>
+        </article>
+        <article className="rounded-2xl border border-[#e4dbcf] bg-[#fffdf9] p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#aa7f28]">Activos</p>
+          <p className="mt-3 text-2xl font-semibold text-[#142033]">{activeModules}</p>
+        </article>
+        <article className="rounded-2xl border border-[#e4dbcf] bg-[#fffdf9] p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#aa7f28]">Última actualización</p>
+          <p className="mt-3 text-lg font-semibold text-[#142033]">{new Date(config.updatedAt).toLocaleString("es-MX")}</p>
+        </article>
       </section>
 
       <section className="rounded-3xl border border-[#e0d8cb] bg-white p-6 shadow-[0_20px_55px_rgba(15,23,42,0.08)] md:p-7">
@@ -336,22 +333,15 @@ export default function AdminHomePage() {
             const toggleLabel = module.status === "ACTIVE" ? "Desactivar" : "Activar";
 
             return (
-              <article
-                key={module.key}
-                className="group rounded-2xl border border-[#ece3d6] bg-[#fffdfa] p-5 transition hover:-translate-y-0.5 hover:border-[#d5c2a0] hover:shadow-[0_16px_35px_rgba(15,23,42,0.09)]"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-[#f2e7ce] text-[#8f6717]">
+              <article key={module.key} className="rounded-2xl border border-[#ece3d6] bg-[#fffdfa] p-5">
+                <div className="flex items-start justify-between">
+                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#f2e7ce] text-[#8f6717]">
                     <Icon className="h-5 w-5" />
                   </span>
-                  <span
-                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide ${statusMeta.className}`}
-                  >
-                    <StatusIcon className="h-3.5 w-3.5" />
-                    {statusMeta.label}
+                  <span className={`rounded-full px-3 py-1 text-xs font-semibold ${module.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-700"}`}>
+                    {module.status === "ACTIVE" ? "Activo" : "Inactivo"}
                   </span>
                 </div>
-
                 <h3 className="mt-4 text-lg font-semibold text-[#132035]">{module.name}</h3>
                 <p className="mt-2 min-h-14 text-sm leading-6 text-slate-600">{module.description}</p>
 
@@ -365,6 +355,10 @@ export default function AdminHomePage() {
                     Editar
                   </button>
 
+                <div className="mt-4 grid gap-2">
+                  <button type="button" onClick={() => openEdit(module.key)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#d4a62a] px-4 py-2.5 text-sm font-semibold text-[#111d31]">
+                    <FilePenLine className="h-4 w-4" /> Editar
+                  </button>
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
