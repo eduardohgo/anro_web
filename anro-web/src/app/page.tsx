@@ -1,138 +1,180 @@
 "use client";
 
-import HeroCarousel from "@/components/Home/HeroCarousel";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import HeroCarousel from "@/components/Home/HeroCarousel";
 import {
   DEFAULT_HOME_CONTENT,
   HOME_CONTENT_STORAGE_KEY,
-  HomeContentConfig,
   parseStoredHomeContent,
 } from "@/lib/home-content";
 
 export default function HomePage() {
-  const [homeContent, setHomeContent] = useState<HomeContentConfig>(DEFAULT_HOME_CONTENT);
+  const [homeContent, setHomeContent] = useState(DEFAULT_HOME_CONTENT);
 
   useEffect(() => {
-    const sync = () => {
-      setHomeContent(parseStoredHomeContent(window.localStorage.getItem(HOME_CONTENT_STORAGE_KEY)));
+    const stored = window.localStorage.getItem(HOME_CONTENT_STORAGE_KEY);
+    setHomeContent(parseStoredHomeContent(stored));
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === HOME_CONTENT_STORAGE_KEY) {
+        setHomeContent(parseStoredHomeContent(event.newValue));
+      }
     };
 
-    sync();
-    window.addEventListener("storage", sync);
-    return () => window.removeEventListener("storage", sync);
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
   }, []);
 
-  const orderedDevelopmentCards = useMemo(
-    () => [...homeContent.developmentSection.cards].filter((card) => card.active).sort((a, b) => a.order - b.order),
-    [homeContent.developmentSection.cards],
+  const developmentCards = useMemo(
+    () =>
+      [...homeContent.developmentSection.cards]
+        .filter((card) => card.active)
+        .sort((a, b) => a.order - b.order),
+    [homeContent.developmentSection.cards]
   );
 
-  const orderedServiceCards = useMemo(
-    () => [...homeContent.servicesSection.cards].filter((card) => card.active).sort((a, b) => a.order - b.order),
-    [homeContent.servicesSection.cards],
+  const serviceCards = useMemo(
+    () =>
+      [...homeContent.servicesSection.cards]
+        .filter((card) => card.active)
+        .sort((a, b) => a.order - b.order),
+    [homeContent.servicesSection.cards]
   );
+
+  const commitment = homeContent.commitmentSection;
+  const cta = homeContent.ctaSection;
 
   return (
-    <>
+    <main className="bg-[#fcfaf7]">
       <HeroCarousel />
 
-      <div className="space-y-16 bg-[#f7f4f2] px-4 py-16 md:space-y-24 md:py-20">
-        <section className="mx-auto w-full max-w-[1850px] overflow-hidden rounded-[32px] border border-black/8 bg-[#fffdf9] shadow-[0_18px_50px_rgba(0,0,0,0.06)]">
-          <div className="relative">
-            <div
-              className="absolute inset-0 bg-cover bg-center opacity-85"
-              style={{ backgroundImage: `url('${homeContent.developmentSection.backgroundImage}')` }}
+      <div className="mx-auto flex w-full max-w-[1850px] flex-col gap-10 px-4 py-10 md:px-6 xl:px-10">
+        <section className="relative overflow-hidden rounded-[32px] border border-black/8 bg-[#f5f1eb] p-6 md:p-8">
+          <div className="absolute inset-0">
+            <Image
+              src={homeContent.developmentSection.backgroundImage}
+              alt={homeContent.developmentSection.title}
+              fill
+              className="object-cover opacity-20"
             />
-            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,253,249,0.28)_0%,rgba(255,253,249,0.18)_100%)]" />
+          </div>
 
-            <div className="relative grid gap-8 px-6 py-10 md:grid-cols-12 md:px-10 lg:px-14">
-              <div className="md:col-span-8">
-                <div className="inline-block rounded-[26px] border border-white/40 bg-white/55 px-6 py-5 shadow-sm backdrop-blur-md">
-                  <span className="inline-flex rounded-full border border-[#d4a62a]/30 bg-[#d4a62a]/10 px-4 py-1 text-sm font-semibold text-[#a87810]">
-                    {homeContent.developmentSection.badge}
-                  </span>
+          <div className="relative grid gap-8 xl:grid-cols-[1fr_0.42fr] xl:items-start">
+            <div>
+              <span className="inline-flex rounded-full border border-[#d4a62a]/30 bg-[#d4a62a]/10 px-4 py-1 text-sm font-semibold text-[#a87810]">
+                {homeContent.developmentSection.badge}
+              </span>
 
-                  <h2 className="mt-4 text-4xl font-extrabold tracking-tight text-[#1f1a17] md:text-5xl">
-                    {homeContent.developmentSection.title}
-                  </h2>
-                  <p className="mt-2 text-lg font-medium text-[#5f5650]">{homeContent.developmentSection.subtitle}</p>
-                </div>
+              <h2 className="mt-4 text-4xl font-extrabold tracking-tight text-[#1f1a17]">
+                {homeContent.developmentSection.title}
+              </h2>
 
-                <div className="mt-8 grid gap-4 md:grid-cols-3">
-                  {orderedDevelopmentCards.slice(0, 3).map((card) => (
-                    <div
-                      key={card.id}
-                      className="group relative z-10 overflow-hidden rounded-[24px] border border-black/8 bg-[#fffdf9]/95 shadow-[0_12px_28px_rgba(0,0,0,0.08)] transition duration-300 hover:z-20 hover:scale-[1.14] hover:shadow-xl"
-                    >
-                      <div className="relative h-[240px] w-full overflow-hidden md:h-[270px]">
-                        <Image src={card.image} alt={card.title} fill className="object-cover transition duration-500 group-hover:scale-105" />
-                      </div>
-                      <div className="px-5 py-4">
-                        <div className="flex items-center gap-2">
-                          <span className="h-2.5 w-2.5 rounded-full bg-[#d4a62a]" />
-                          <h3 className="text-[15px] font-bold text-[#1f1a17] md:text-[18px]">{card.title}</h3>
-                        </div>
-                        {card.tag ? <p className="mt-1 text-xs font-medium text-[#9f7f43]">{card.tag}</p> : null}
-                      </div>
+              <p className="mt-3 max-w-3xl text-lg leading-relaxed text-[#5f5650]">
+                {homeContent.developmentSection.subtitle}
+              </p>
+
+              <div className="mt-8 grid gap-5 md:grid-cols-3">
+                {developmentCards.map((card) => (
+                  <article
+                    key={card.id}
+                    className="overflow-hidden rounded-[28px] bg-white shadow-[0_15px_35px_rgba(0,0,0,0.08)]"
+                  >
+                    <div className="relative h-[240px] w-full">
+                      <Image
+                        src={card.image}
+                        alt={card.title}
+                        fill
+                        className="object-cover"
+                      />
                     </div>
-                  ))}
-                </div>
-              </div>
 
-              <div className="flex items-start justify-end md:col-span-4">
-                <div className="w-full max-w-[420px] rounded-[24px] border border-white/35 bg-white/55 p-6 shadow-[0_14px_35px_rgba(0,0,0,0.08)] backdrop-blur-md">
-                  <ul className="space-y-4 text-xl font-medium text-[#2f2824]">
-                    {homeContent.developmentSection.sideList.map((item) => (
-                      <li key={item} className="flex items-center gap-3">
-                        <span className="h-2.5 w-2.5 rounded-full bg-[#d4a62a]" />
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-
-                  <div className="mt-6 flex justify-end">
-                    <a href={homeContent.developmentSection.buttonLink} className="inline-flex items-center rounded-2xl bg-[#d4a62a] px-5 py-3 text-sm font-bold text-black transition hover:bg-[#be931f]">
-                      {homeContent.developmentSection.buttonText}
-                      <span className="ml-2">›</span>
-                    </a>
-                  </div>
-                </div>
+                    <div className="p-5">
+                      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#a87810]">
+                        {card.tag}
+                      </p>
+                      <h3 className="mt-2 text-2xl font-bold text-[#1f1a17]">
+                        {card.title}
+                      </h3>
+                    </div>
+                  </article>
+                ))}
               </div>
             </div>
+
+            <aside className="rounded-[28px] bg-white/80 p-5 shadow-[0_15px_35px_rgba(0,0,0,0.06)] backdrop-blur">
+              <h3 className="text-xl font-bold text-[#1f1a17]">Información rápida</h3>
+
+              <ul className="mt-5 space-y-4">
+                {homeContent.developmentSection.sideList.map((item, index) => (
+                  <li
+                    key={`${item}-${index}`}
+                    className="rounded-2xl bg-[#f3ede5] px-4 py-3 text-base text-[#5f5650]"
+                  >
+                    {item}
+                  </li>
+                ))}
+              </ul>
+
+              <Link
+                href={homeContent.developmentSection.buttonLink}
+                className="mt-6 inline-flex items-center rounded-2xl bg-[#d4a62a] px-5 py-3 text-sm font-bold text-black transition hover:bg-[#be931f]"
+              >
+                {homeContent.developmentSection.buttonText}
+              </Link>
+            </aside>
           </div>
         </section>
 
-        <section className="mx-auto w-full max-w-[1850px]">
-          <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <section className="overflow-hidden rounded-[32px] border border-black/8 bg-white p-6 shadow-[0_18px_45px_rgba(0,0,0,0.05)] md:p-8">
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
               <span className="inline-flex rounded-full border border-[#d4a62a]/30 bg-[#d4a62a]/10 px-4 py-1 text-sm font-semibold text-[#a87810]">
                 {homeContent.servicesSection.badge}
               </span>
 
-              <h2 className="mt-3 text-4xl font-extrabold tracking-tight text-[#1f1a17]">{homeContent.servicesSection.title}</h2>
+              <h2 className="mt-4 text-4xl font-extrabold tracking-tight text-[#1f1a17]">
+                {homeContent.servicesSection.title}
+              </h2>
 
-              <p className="mt-2 max-w-2xl text-lg text-[#5f5650]">{homeContent.servicesSection.description}</p>
+              <p className="mt-3 max-w-3xl text-lg leading-relaxed text-[#5f5650]">
+                {homeContent.servicesSection.description}
+              </p>
             </div>
 
-            <Link href={homeContent.servicesSection.buttonLink} className="inline-flex items-center justify-between rounded-2xl bg-[#1f1a17] px-6 py-4 font-bold text-white transition hover:bg-[#120f0d]">
-              <span>{homeContent.servicesSection.buttonText}</span>
-              <span className="ml-4">→</span>
+            <Link
+              href={homeContent.servicesSection.buttonLink}
+              className="inline-flex items-center rounded-2xl bg-[#1f1a17] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#120f0d]"
+            >
+              {homeContent.servicesSection.buttonText}
             </Link>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-            {orderedServiceCards.map((service) => (
-              <div key={service.id} className="group overflow-hidden rounded-[28px] border border-black/8 bg-[#fffdf9] shadow-[0_12px_30px_rgba(0,0,0,0.06)] transition duration-300 hover:-translate-y-1 hover:shadow-xl">
-                <div className="relative h-52 w-full overflow-hidden">
-                  <Image src={service.image} alt={service.title} fill className="object-cover transition duration-500 group-hover:scale-105" />
+          <div className="mt-8 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+            {serviceCards.map((card) => (
+              <article
+                key={card.id}
+                className="overflow-hidden rounded-[28px] border border-black/8 bg-[#fffdf9] shadow-[0_14px_34px_rgba(0,0,0,0.05)]"
+              >
+                <div className="relative h-[220px] w-full">
+                  <Image
+                    src={card.image}
+                    alt={card.title}
+                    fill
+                    className="object-cover"
+                  />
                 </div>
-                <div className="p-6">
-                  <h3 className="text-2xl font-bold leading-tight text-[#1f1a17]">{service.title}</h3>
-                  <p className="mt-3 text-base leading-relaxed text-[#5f5650]">{service.description}</p>
+
+                <div className="p-5">
+                  <h3 className="text-2xl font-bold text-[#1f1a17]">
+                    {card.title}
+                  </h3>
+                  <p className="mt-3 text-base leading-7 text-[#5f5650]">
+                    {card.description}
+                  </p>
                 </div>
-              </div>
+              </article>
             ))}
           </div>
         </section>
@@ -141,36 +183,47 @@ export default function HomePage() {
           <div className="grid gap-8 md:grid-cols-12 md:items-center">
             <div className="md:col-span-5">
               <span className="inline-flex rounded-full border border-[#d4a62a]/30 bg-[#d4a62a]/10 px-4 py-1 text-sm font-semibold text-[#a87810]">
-                Confianza ANRO
+                {commitment.badge}
               </span>
 
-              <h2 className="mt-4 text-4xl font-extrabold tracking-tight text-[#1f1a17]">Compromiso y resultados</h2>
+              <h2 className="mt-4 text-4xl font-extrabold tracking-tight text-[#1f1a17]">
+                {commitment.title}
+              </h2>
 
               <p className="mt-3 max-w-xl text-lg leading-relaxed text-[#5f5650]">
-                En ANRO trabajamos con responsabilidad, atención personalizada y seguimiento constante para brindar confianza en cada etapa del proyecto.
-                Nuestro compromiso se demuestra con hechos, avance y presencia real.
+                {commitment.description}
               </p>
 
               <div className="mt-8 flex flex-wrap gap-4">
-                <Link href="/desarrollo" className="inline-flex items-center rounded-2xl bg-[#1f1a17] px-6 py-3 text-base font-bold text-white transition hover:bg-[#120f0d]">
-                  Ver avances
+                <Link
+                  href={commitment.primaryButtonLink}
+                  className="inline-flex items-center rounded-2xl bg-[#1f1a17] px-6 py-3 text-base font-bold text-white transition hover:bg-[#120f0d]"
+                >
+                  {commitment.primaryButtonText}
                 </Link>
 
-                <Link href="/contacto" className="inline-flex items-center rounded-2xl bg-[#d4a62a] px-6 py-3 text-base font-bold text-black transition hover:bg-[#be931f]">
-                  Agendar cita
+                <Link
+                  href={commitment.secondaryButtonLink}
+                  className="inline-flex items-center rounded-2xl bg-[#d4a62a] px-6 py-3 text-base font-bold text-black transition hover:bg-[#be931f]"
+                >
+                  {commitment.secondaryButtonText}
                 </Link>
               </div>
 
               <div className="mt-8 grid gap-4 sm:grid-cols-2">
-                <div className="rounded-2xl bg-[#f3ede5] p-4 ring-1 ring-black/5">
-                  <div className="text-lg font-bold text-[#1f1a17]">Atención cercana</div>
-                  <div className="mt-1 text-sm text-[#7a7069]">Seguimiento claro y acompañamiento en el proceso.</div>
-                </div>
-
-                <div className="rounded-2xl bg-[#f3ede5] p-4 ring-1 ring-black/5">
-                  <div className="text-lg font-bold text-[#1f1a17]">Trabajo constante</div>
-                  <div className="mt-1 text-sm text-[#7a7069]">Evidencia real del desarrollo y compromiso con cada etapa.</div>
-                </div>
+                {commitment.featureBlocks.map((block, index) => (
+                  <div
+                    key={`${block.title}-${index}`}
+                    className="rounded-2xl bg-[#f3ede5] p-4 ring-1 ring-black/5"
+                  >
+                    <div className="text-lg font-bold text-[#1f1a17]">
+                      {block.title}
+                    </div>
+                    <div className="mt-1 text-sm text-[#7a7069]">
+                      {block.description}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -178,56 +231,85 @@ export default function HomePage() {
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="group relative overflow-hidden rounded-[28px] shadow-sm ring-1 ring-black/10 md:row-span-2">
                   <div className="relative h-[420px] w-full overflow-hidden">
-                    <Image src="/fraccionamiento/carrusel1.jpg" alt="Compromiso y resultados" fill className="object-cover transition duration-500 group-hover:scale-105" />
+                    <Image
+                      src={commitment.mainImage.image}
+                      alt={commitment.mainImage.alt}
+                      fill
+                      className="object-cover transition duration-500 group-hover:scale-105"
+                    />
                   </div>
 
                   <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-5">
-                    <h3 className="text-xl font-bold text-white">Presencia y avance real</h3>
-                    <p className="mt-1 text-sm text-white/80">Seguimiento constante del desarrollo.</p>
+                    <h3 className="text-xl font-bold text-white">
+                      {commitment.mainImage.title}
+                    </h3>
+                    <p className="mt-1 text-sm text-white/80">
+                      {commitment.mainImage.subtitle}
+                    </p>
                   </div>
                 </div>
 
-                <div className="group relative overflow-hidden rounded-[28px] shadow-sm ring-1 ring-black/10">
-                  <div className="relative h-[200px] w-full overflow-hidden">
-                    <Image src="/fraccionamiento/carrusel2.jpg" alt="Atención y seguimiento" fill className="object-cover transition duration-500 group-hover:scale-105" />
-                  </div>
+                {commitment.sideImages.map((image, index) => (
+                  <div
+                    key={`${image.title}-${index}`}
+                    className="group relative overflow-hidden rounded-[28px] shadow-sm ring-1 ring-black/10"
+                  >
+                    <div className="relative h-[200px] w-full overflow-hidden">
+                      <Image
+                        src={image.image}
+                        alt={image.alt}
+                        fill
+                        className="object-cover transition duration-500 group-hover:scale-105"
+                      />
+                    </div>
 
-                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-4">
-                    <h3 className="text-lg font-bold text-white">Seguimiento constante</h3>
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-4">
+                      <h3 className="text-lg font-bold text-white">
+                        {image.title}
+                      </h3>
+                      <p className="mt-1 text-sm text-white/80">
+                        {image.subtitle}
+                      </p>
+                    </div>
                   </div>
-                </div>
-
-                <div className="group relative overflow-hidden rounded-[28px] shadow-sm ring-1 ring-black/10">
-                  <div className="relative h-[200px] w-full overflow-hidden">
-                    <Image src="/fraccionamiento/carrusel3.jpg" alt="Desarrollo en marcha" fill className="object-cover transition duration-500 group-hover:scale-105" />
-                  </div>
-
-                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-4">
-                    <h3 className="text-lg font-bold text-white">Desarrollo en marcha</h3>
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
           </div>
         </section>
 
-        <section className="rounded-[32px] bg-gradient-to-br from-[#2c2622] via-[#362e29] to-[#443831] p-8 text-white shadow-[0_24px_60px_rgba(20,15,10,0.18)] md:p-12">
-          <div className="mx-auto max-w-3xl text-center">
-            <h2 className="text-3xl font-bold md:text-4xl">{homeContent.ctaSection.title}</h2>
-
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-              <a href={homeContent.ctaSection.primaryButtonLink} target="_blank" rel="noopener noreferrer" className="rounded-2xl bg-green-600 px-8 py-4 font-bold text-white transition hover:bg-green-700">
-                {homeContent.ctaSection.primaryButtonText}
-              </a>
-              <a href={homeContent.ctaSection.secondaryButtonLink} className="rounded-2xl bg-[#d4a62a] px-8 py-4 font-bold text-black transition hover:bg-[#be931f]">
-                {homeContent.ctaSection.secondaryButtonText}
-              </a>
+        <section className="overflow-hidden rounded-[32px] bg-[#111827] px-6 py-8 text-white shadow-[0_18px_45px_rgba(0,0,0,0.12)] md:px-8 md:py-10">
+          <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+            <div className="max-w-3xl">
+              <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#d4a62a]">
+                Cierre del Home
+              </p>
+              <h2 className="mt-3 text-4xl font-extrabold tracking-tight">
+                {cta.title}
+              </h2>
+              <p className="mt-4 text-lg leading-relaxed text-slate-300">
+                {cta.footerText}
+              </p>
             </div>
 
-            <p className="mt-6 text-sm text-[#d9cec0]">{homeContent.ctaSection.footerText}</p>
+            <div className="flex flex-wrap gap-4">
+              <Link
+                href={cta.primaryButtonLink}
+                className="inline-flex items-center rounded-2xl bg-[#d4a62a] px-6 py-3 text-sm font-bold text-black transition hover:bg-[#be931f]"
+              >
+                {cta.primaryButtonText}
+              </Link>
+
+              <Link
+                href={cta.secondaryButtonLink}
+                className="inline-flex items-center rounded-2xl border border-white/20 bg-white/10 px-6 py-3 text-sm font-bold text-white transition hover:bg-white/20"
+              >
+                {cta.secondaryButtonText}
+              </Link>
+            </div>
           </div>
         </section>
       </div>
-    </>
+    </main>
   );
 }
