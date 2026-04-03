@@ -6,25 +6,33 @@ import { useEffect, useMemo, useState } from "react";
 import HeroCarousel from "@/components/Home/HeroCarousel";
 import {
   DEFAULT_HOME_CONTENT,
+  HOME_CONTENT_UPDATED_EVENT,
   HOME_CONTENT_STORAGE_KEY,
-  parseStoredHomeContent,
+  getHomeContentFromStorage,
 } from "@/lib/home-content";
 
 export default function HomePage() {
   const [homeContent, setHomeContent] = useState(DEFAULT_HOME_CONTENT);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(HOME_CONTENT_STORAGE_KEY);
-    setHomeContent(parseStoredHomeContent(stored));
+    const refreshHomeContent = () => {
+      setHomeContent(getHomeContentFromStorage());
+    };
+
+    refreshHomeContent();
 
     const handleStorage = (event: StorageEvent) => {
       if (event.key === HOME_CONTENT_STORAGE_KEY) {
-        setHomeContent(parseStoredHomeContent(event.newValue));
+        refreshHomeContent();
       }
     };
 
+    window.addEventListener(HOME_CONTENT_UPDATED_EVENT, refreshHomeContent);
     window.addEventListener("storage", handleStorage);
-    return () => window.removeEventListener("storage", handleStorage);
+    return () => {
+      window.removeEventListener(HOME_CONTENT_UPDATED_EVENT, refreshHomeContent);
+      window.removeEventListener("storage", handleStorage);
+    };
   }, []);
 
   const developmentCards = useMemo(
