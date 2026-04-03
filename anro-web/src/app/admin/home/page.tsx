@@ -21,11 +21,11 @@ import type {
   ReactNode,
   SetStateAction,
 } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   DEFAULT_HOME_CONTENT,
-  HOME_CONTENT_STORAGE_KEY,
-  parseStoredHomeContent,
+  getHomeContentFromStorage,
+  saveHomeContentToStorage,
   type HomeContentConfig,
 } from "@/lib/home-content";
 
@@ -472,10 +472,7 @@ function buildHomeContentFromModules(currentModules: HomeModule[]): HomeContentC
 
 function persistHomeContent(currentModules: HomeModule[]) {
   const nextHomeContent = buildHomeContentFromModules(currentModules);
-  window.localStorage.setItem(
-    HOME_CONTENT_STORAGE_KEY,
-    JSON.stringify(nextHomeContent)
-  );
+  return saveHomeContentToStorage(nextHomeContent);
 }
 
 function Field({
@@ -2017,17 +2014,22 @@ function renderModuleEditor(
 }
 
 export default function AdminHomePage() {
-  const [modules, setModules] = useState<HomeModule[]>(() =>
-    createModulesFromHomeContent(DEFAULT_HOME_CONTENT)
+  const initialHomeContent = useMemo(
+    () =>
+      typeof window === "undefined"
+        ? DEFAULT_HOME_CONTENT
+        : getHomeContentFromStorage(),
+    []
   );
-  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
-
-  useEffect(() => {
-    const stored = window.localStorage.getItem(HOME_CONTENT_STORAGE_KEY);
-    const parsed = parseStoredHomeContent(stored);
-    setModules(createModulesFromHomeContent(parsed));
-    setLastUpdated(parsed.updatedAt ? new Date(parsed.updatedAt) : new Date());
-  }, []);
+  const [modules, setModules] = useState<HomeModule[]>(() =>
+    createModulesFromHomeContent(initialHomeContent)
+  );
+  const [lastUpdated, setLastUpdated] = useState<Date>(
+    () =>
+      initialHomeContent.updatedAt
+        ? new Date(initialHomeContent.updatedAt)
+        : new Date()
+  );
 
   const heroModule = useMemo(
     () => modules.find((module) => module.key === "hero") ?? null,
@@ -2097,8 +2099,8 @@ export default function AdminHomePage() {
     );
 
     setModules(nextModules);
-    persistHomeContent(nextModules);
-    setLastUpdated(new Date());
+    const savedContent = persistHomeContent(nextModules);
+    setLastUpdated(new Date(savedContent.updatedAt));
     setIsInlineHeroEditing(false);
   };
 
@@ -2141,8 +2143,8 @@ export default function AdminHomePage() {
     );
 
     setModules(nextModules);
-    persistHomeContent(nextModules);
-    setLastUpdated(new Date());
+    const savedContent = persistHomeContent(nextModules);
+    setLastUpdated(new Date(savedContent.updatedAt));
     setIsInlineDesarrolloEditing(false);
   };
 
@@ -2185,8 +2187,8 @@ export default function AdminHomePage() {
     );
 
     setModules(nextModules);
-    persistHomeContent(nextModules);
-    setLastUpdated(new Date());
+    const savedContent = persistHomeContent(nextModules);
+    setLastUpdated(new Date(savedContent.updatedAt));
     setIsInlineServiciosEditing(false);
   };
 
@@ -2229,8 +2231,8 @@ export default function AdminHomePage() {
     );
 
     setModules(nextModules);
-    persistHomeContent(nextModules);
-    setLastUpdated(new Date());
+    const savedContent = persistHomeContent(nextModules);
+    setLastUpdated(new Date(savedContent.updatedAt));
     setIsInlineCompromisoEditing(false);
   };
 
@@ -2273,8 +2275,8 @@ export default function AdminHomePage() {
     );
 
     setModules(nextModules);
-    persistHomeContent(nextModules);
-    setLastUpdated(new Date());
+    const savedContent = persistHomeContent(nextModules);
+    setLastUpdated(new Date(savedContent.updatedAt));
     setIsInlineCtaEditing(false);
   };
 
