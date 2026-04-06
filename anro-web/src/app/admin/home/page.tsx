@@ -23,10 +23,11 @@ import type {
   ReactNode,
   SetStateAction,
 } from "react";
-import { useMemo, useState } from "react"; 
+import { useEffect, useMemo, useState } from "react"; 
 import {
   DEFAULT_HOME_CONTENT,
-  getHomeContentFromStorage,
+  fetchHomeContentFromApi,
+  saveHomeContentToApi,
   saveHomeContentToStorage,
   type HomeContentConfig,
 } from "@/lib/home-content";
@@ -472,9 +473,15 @@ function buildHomeContentFromModules(currentModules: HomeModule[]): HomeContentC
   return base;
 }
 
-function persistHomeContent(currentModules: HomeModule[]) {
+async function persistHomeContent(currentModules: HomeModule[]) {
   const nextHomeContent = buildHomeContentFromModules(currentModules);
-  return saveHomeContentToStorage(nextHomeContent);
+
+  try {
+    return await saveHomeContentToApi(nextHomeContent, "/api/admin/home");
+  } catch (error) {
+    console.error("No fue posible guardar Home en DB, se usa fallback local.", error);
+    return saveHomeContentToStorage(nextHomeContent);
+  }
 }
 
 function Field({
@@ -584,7 +591,7 @@ function InlineEditorShell({
   isEditing: boolean;
   onEdit: () => void;
   onCancel: () => void;
-  onSave: () => void;
+  onSave: () => void | Promise<void>;
   preview: ReactNode;
   children?: ReactNode;
 }) {
@@ -658,45 +665,135 @@ function InlineEditorShell({
   );
 }
 
-function handleImageFile(
+interface CloudinaryUploadResult {
+  public_id: string;
+  url: string;
+  secure_url: string;
+  format?: string;
+  width?: number;
+  height?: number;
+  bytes?: number;
+}
+
+async function getCloudinarySignature() {
+  const response = await fetch("/api/cloudinary/sign", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ folder: "anro/home" }),
+  });
+
+  if (!response.ok) {
+    throw new Error("No se pudo generar la firma de Cloudinary.");
+  }
+
+  return (await response.json()) as {
+    timestamp: number;
+    folder: string;
+    signature: string;
+    apiKey: string;
+    cloudName: string;
+  };
+}
+
+async function uploadImageToCloudinary(file: File): Promise<CloudinaryUploadResult> {
+  const signatureData = await getCloudinarySignature();
+
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("api_key", signatureData.apiKey);
+  formData.append("timestamp", String(signatureData.timestamp));
+  formData.append("signature", signatureData.signature);
+  formData.append("folder", signatureData.folder);
+
+  const response = await fetch(
+    `https://api.cloudinary.com/v1_1/${signatureData.cloudName}/image/upload`,
+    {
+      method: "POST",
+      body: formData,
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error("No se pudo subir la imagen a Cloudinary.");
+  }
+
+  return (await response.json()) as CloudinaryUploadResult;
+}
+
+async function registerMediaAsset({
+  sectionKey,
+  upload,
+}: {
+  sectionKey: string;
+  upload: CloudinaryUploadResult;
+}) {
+  await fetch("/api/admin/media", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      pageKey: "home",
+      sectionKey,
+      publicId: upload.public_id,
+      url: upload.url,
+      secureUrl: upload.secure_url,
+      format: upload.format,
+      width: upload.width,
+      height: upload.height,
+      bytes: upload.bytes,
+    }),
+  });
+}
+
+async function handleImageFile(
   event: ChangeEvent<HTMLInputElement>,
-  onReady: (dataUrl: string) => void
+  sectionKey: string,
+  onReady: (url: string) => void | Promise<void>,
+  onUploadingChange: (uploading: boolean) => void
 ) {
   const file = event.target.files?.[0];
   if (!file) return;
 
-  const reader = new FileReader();
-  reader.onload = () => {
-    if (typeof reader.result === "string") {
-      onReady(reader.result);
-    }
-  };
-  reader.readAsDataURL(file);
+  try {
+    onUploadingChange(true);
+    const upload = await uploadImageToCloudinary(file);
+    await registerMediaAsset({ sectionKey, upload });
+    await onReady(upload.secure_url || upload.url);
+  } catch (error) {
+    console.error("No fue posible subir/registrar la imagen.", error);
+    alert("No fue posible subir la imagen en este momento.");
+  } finally {
+    onUploadingChange(false);
+    event.target.value = "";
+  }
 }
 
 function ImageUploader({
   label,
   image,
   onChange,
+  sectionKey,
   heightClass = "h-44",
 }: {
   label: string;
   image: string;
-  onChange: (value: string) => void;
+  onChange: (value: string) => void | Promise<void>;
+  sectionKey: string;
   heightClass?: string;
 }) {
+  const [isUploading, setIsUploading] = useState(false);
   return (
     <div className="space-y-4 rounded-[24px] border border-[#e7dcc9] bg-[linear-gradient(180deg,#fffdfa_0%,#f8f2e8_100%)] p-4 shadow-[0_14px_30px_rgba(15,23,42,0.05)]">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm font-medium text-[#2d3b52]">{label}</p>
         <label className="inline-flex cursor-pointer items-center gap-2 rounded-2xl border border-[#d9ccb6] bg-white px-4 py-2.5 text-sm font-semibold text-[#314058] shadow-sm transition hover:-translate-y-0.5 hover:bg-[#fff8ed]">
           <Upload className="h-4 w-4" />
-          Subir imagen
+          {isUploading ? "Subiendo..." : "Subir imagen"}
           <input
             type="file"
             accept="image/*"
             className="hidden"
-            onChange={(event) => handleImageFile(event, onChange)}
+            disabled={isUploading}
+            onChange={(event) => handleImageFile(event, sectionKey, onChange, setIsUploading)}
           />
         </label>
       </div>
@@ -1276,6 +1373,7 @@ function renderModuleEditor(
                 <div className="mt-4 grid gap-4 md:grid-cols-[1fr_auto]">
                   <ImageUploader
                     label="Imagen del slide"
+                    sectionKey={`hero-slide-${slide.id}`}
                     image={slide.image}
                     onChange={(value) =>
                       setDraftContent((current) => {
@@ -1376,6 +1474,7 @@ function renderModuleEditor(
         <SectionShell title="Imagen de fondo de la sección">
           <ImageUploader
             label="Fondo de Desarrollo principal"
+            sectionKey="desarrollo-background"
             image={content.backgroundImage}
             onChange={(value) =>
               setDraftContent((current) =>
@@ -1501,6 +1600,7 @@ function renderModuleEditor(
               <div className="mt-4">
                 <ImageUploader
                   label="Imagen de la tarjeta"
+                  sectionKey={`desarrollo-card-${card.id}`}
                   image={card.image}
                   onChange={(value) =>
                     setDraftContent((current) => {
@@ -1682,6 +1782,7 @@ function renderModuleEditor(
               <div className="mt-4">
                 <ImageUploader
                   label="Imagen del servicio"
+                  sectionKey={`servicios-card-${card.id}`}
                   image={card.image}
                   onChange={(value) =>
                     setDraftContent((current) => {
@@ -1897,6 +1998,7 @@ function renderModuleEditor(
           />
           <ImageUploader
             label="Imagen principal"
+            sectionKey="compromiso-main-image"
             image={content.mainImage.image}
             onChange={(value) =>
               setDraftContent((current) =>
@@ -1941,6 +2043,7 @@ function renderModuleEditor(
               <div className="mt-4">
                 <ImageUploader
                   label={`Imagen secundaria ${index + 1}`}
+                  sectionKey={`compromiso-side-${image.id}`}
                   image={image.image}
                   onChange={(value) =>
                     setDraftContent((current) => {
@@ -2016,22 +2119,36 @@ function renderModuleEditor(
 }
 
 export default function AdminHomePage() {
-  const initialHomeContent = useMemo(
-    () =>
-      typeof window === "undefined"
-        ? DEFAULT_HOME_CONTENT
-        : getHomeContentFromStorage(),
-    []
-  );
   const [modules, setModules] = useState<HomeModule[]>(() =>
-    createModulesFromHomeContent(initialHomeContent)
+    createModulesFromHomeContent(DEFAULT_HOME_CONTENT)
   );
   const [lastUpdated, setLastUpdated] = useState<Date>(
     () =>
-      initialHomeContent.updatedAt
-        ? new Date(initialHomeContent.updatedAt)
+      DEFAULT_HOME_CONTENT.updatedAt
+        ? new Date(DEFAULT_HOME_CONTENT.updatedAt)
         : new Date()
   );
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadHomeContent = async () => {
+      try {
+        const content = await fetchHomeContentFromApi("/api/admin/home");
+        if (!mounted) return;
+        setModules(createModulesFromHomeContent(content));
+        setLastUpdated(new Date(content.updatedAt));
+      } catch (error) {
+        console.error("No fue posible cargar Home desde DB.", error);
+      }
+    };
+
+    void loadHomeContent();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const heroModule = useMemo(
     () => modules.find((module) => module.key === "hero") ?? null,
@@ -2091,7 +2208,7 @@ export default function AdminHomePage() {
     setIsInlineHeroEditing(false);
   };
 
-  const saveInlineHeroEditor = () => {
+  const saveInlineHeroEditor = async () => {
     if (!inlineHeroDraft) return;
 
     const nextModules = modules.map((module) =>
@@ -2101,7 +2218,7 @@ export default function AdminHomePage() {
     );
 
     setModules(nextModules);
-    const savedContent = persistHomeContent(nextModules);
+    const savedContent = await persistHomeContent(nextModules);
     setLastUpdated(new Date(savedContent.updatedAt));
     setIsInlineHeroEditing(false);
   };
@@ -2135,7 +2252,7 @@ export default function AdminHomePage() {
     setIsInlineDesarrolloEditing(false);
   };
 
-  const saveInlineDesarrolloEditor = () => {
+  const saveInlineDesarrolloEditor = async () => {
     if (!inlineDesarrolloDraft) return;
 
     const nextModules = modules.map((module) =>
@@ -2145,7 +2262,7 @@ export default function AdminHomePage() {
     );
 
     setModules(nextModules);
-    const savedContent = persistHomeContent(nextModules);
+    const savedContent = await persistHomeContent(nextModules);
     setLastUpdated(new Date(savedContent.updatedAt));
     setIsInlineDesarrolloEditing(false);
   };
@@ -2179,7 +2296,7 @@ export default function AdminHomePage() {
     setIsInlineServiciosEditing(false);
   };
 
-  const saveInlineServiciosEditor = () => {
+  const saveInlineServiciosEditor = async () => {
     if (!inlineServiciosDraft) return;
 
     const nextModules = modules.map((module) =>
@@ -2189,7 +2306,7 @@ export default function AdminHomePage() {
     );
 
     setModules(nextModules);
-    const savedContent = persistHomeContent(nextModules);
+    const savedContent = await persistHomeContent(nextModules);
     setLastUpdated(new Date(savedContent.updatedAt));
     setIsInlineServiciosEditing(false);
   };
@@ -2223,7 +2340,7 @@ export default function AdminHomePage() {
     setIsInlineCompromisoEditing(false);
   };
 
-  const saveInlineCompromisoEditor = () => {
+  const saveInlineCompromisoEditor = async () => {
     if (!inlineCompromisoDraft) return;
 
     const nextModules = modules.map((module) =>
@@ -2233,7 +2350,7 @@ export default function AdminHomePage() {
     );
 
     setModules(nextModules);
-    const savedContent = persistHomeContent(nextModules);
+    const savedContent = await persistHomeContent(nextModules);
     setLastUpdated(new Date(savedContent.updatedAt));
     setIsInlineCompromisoEditing(false);
   };
@@ -2267,7 +2384,7 @@ export default function AdminHomePage() {
     setIsInlineCtaEditing(false);
   };
 
-  const saveInlineCtaEditor = () => {
+  const saveInlineCtaEditor = async () => {
     if (!inlineCtaDraft) return;
 
     const nextModules = modules.map((module) =>
@@ -2277,7 +2394,7 @@ export default function AdminHomePage() {
     );
 
     setModules(nextModules);
-    const savedContent = persistHomeContent(nextModules);
+    const savedContent = await persistHomeContent(nextModules);
     setLastUpdated(new Date(savedContent.updatedAt));
     setIsInlineCtaEditing(false);
   };
@@ -2319,7 +2436,7 @@ export default function AdminHomePage() {
     {
       label: "Última actualización",
       value: formatDate(lastUpdated),
-      hint: "Guardado local conectado al Home público.",
+      hint: "Guardado en base de datos (con fallback local).",
     },
   ];
 
@@ -2500,9 +2617,8 @@ export default function AdminHomePage() {
       <section className="rounded-2xl border border-[#e4dbcf] bg-[#fffdf9] p-5 text-sm leading-7 text-slate-600">
         <p className="font-semibold text-[#142033]">Guardado actual</p>
         <p className="mt-2">
-          Por ahora los cambios se están guardando en <span className="font-semibold">localStorage</span>.
-          Las imágenes nuevas que subas también se guardarán ahí como base64 temporalmente.
-          Más adelante ya las podemos migrar a backend + almacenamiento real.
+          Los cambios del Home ahora se guardan en <span className="font-semibold">PostgreSQL (Neon)</span> mediante API de Next.js.
+          Las imágenes del editor se suben a <span className="font-semibold">Cloudinary</span> y se registran con sus metadatos en la base de datos.
         </p>
       </section>
     </div>
