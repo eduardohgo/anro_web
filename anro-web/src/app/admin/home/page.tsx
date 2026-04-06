@@ -1,3 +1,5 @@
+//src/app/admin/home/page.tsx
+
 "use client";
 
 import {
@@ -21,7 +23,7 @@ import type {
   ReactNode,
   SetStateAction,
 } from "react";
-import { useMemo, useState } from "react";
+import { useMemo, useState } from "react"; 
 import {
   DEFAULT_HOME_CONTENT,
   getHomeContentFromStorage,
