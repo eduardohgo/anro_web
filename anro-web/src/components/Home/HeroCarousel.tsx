@@ -2,33 +2,30 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MapPinIcon } from "@heroicons/react/24/outline";
 import {
   DEFAULT_HOME_CONTENT,
-  HOME_CONTENT_STORAGE_KEY,
   HomeHeroSection,
   HomeHeroSlide,
-  parseStoredHomeContent,
+  type HomeContentConfig,
 } from "@/lib/home-content";
 
-export default function HeroCarousel() {
-  const [slides, setSlides] = useState<HomeHeroSlide[]>(DEFAULT_HOME_CONTENT.heroSlides);
-  const [heroSection, setHeroSection] = useState<HomeHeroSection>(DEFAULT_HOME_CONTENT.heroSection);
+interface HeroCarouselProps {
+  homeContent?: HomeContentConfig;
+}
+
+export default function HeroCarousel({ homeContent }: HeroCarouselProps) {
+  const slides = useMemo<HomeHeroSlide[]>(
+    () => homeContent?.heroSlides ?? DEFAULT_HOME_CONTENT.heroSlides,
+    [homeContent]
+  );
+  const heroSection = useMemo<HomeHeroSection>(
+    () => homeContent?.heroSection ?? DEFAULT_HOME_CONTENT.heroSection,
+    [homeContent]
+  );
+
   const [index, setIndex] = useState(0);
-
-  useEffect(() => {
-    const applyContent = () => {
-      const config = parseStoredHomeContent(window.localStorage.getItem(HOME_CONTENT_STORAGE_KEY));
-      setSlides(config.heroSlides);
-      setHeroSection(config.heroSection);
-      setIndex((current) => (current >= config.heroSlides.length ? 0 : current));
-    };
-
-    applyContent();
-    window.addEventListener("storage", applyContent);
-    return () => window.removeEventListener("storage", applyContent);
-  }, []);
 
   useEffect(() => {
     const id = window.setInterval(() => {
@@ -43,7 +40,7 @@ export default function HeroCarousel() {
   return (
     <section className="relative h-[90vh] min-h-[700px] w-full overflow-hidden">
       <div className="absolute inset-0 h-full w-full">
-        <Image src={slides[index].src} alt={slides[index].alt} fill priority className="object-cover" />
+        <Image src={(slides[index] ?? slides[0]).src} alt={(slides[index] ?? slides[0]).alt} fill priority className="object-cover" />
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(31,26,23,0.78)_0%,rgba(44,38,34,0.62)_38%,rgba(44,38,34,0.35)_68%,rgba(31,26,23,0.62)_100%)]" />
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.18)_0%,rgba(0,0,0,0.28)_100%)]" />
       </div>

@@ -677,3 +677,40 @@ export function resetHomeContentInStorage(
   const resetContent = structuredClone(DEFAULT_HOME_CONTENT);
   return saveHomeContentToStorage(resetContent, { dispatchEvent });
 }
+
+export async function fetchHomeContentFromApi(
+  endpoint = "/api/public/home"
+): Promise<HomeContentConfig> {
+  const response = await fetch(endpoint, { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`No fue posible cargar Home (${response.status})`);
+  }
+
+  const data = (await response.json()) as { content?: unknown };
+  return resolveHomeContent(data.content);
+}
+
+export async function saveHomeContentToApi(
+  content: HomeContentConfig,
+  endpoint = "/api/admin/home"
+): Promise<HomeContentConfig> {
+  const normalizedContent = resolveHomeContent({
+    ...content,
+    updatedAt: new Date().toISOString(),
+  });
+
+  const response = await fetch(endpoint, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ content: normalizedContent }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`No fue posible guardar Home (${response.status})`);
+  }
+
+  const data = (await response.json()) as { content?: unknown };
+  return resolveHomeContent(data.content);
+}
