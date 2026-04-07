@@ -4,29 +4,34 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import HeroCarousel from "@/components/Home/HeroCarousel";
-import { DEFAULT_HOME_CONTENT, fetchHomeContentFromApi } from "@/lib/home-content";
+import {
+  DEFAULT_HOME_CONTENT,
+  HOME_CONTENT_UPDATED_EVENT,
+  HOME_CONTENT_STORAGE_KEY,
+  getHomeContentFromStorage,
+} from "@/lib/home-content";
 
 export default function HomePage() {
   const [homeContent, setHomeContent] = useState(DEFAULT_HOME_CONTENT);
 
   useEffect(() => {
-    let mounted = true;
+    const refreshHomeContent = () => {
+      setHomeContent(getHomeContentFromStorage());
+    };
 
-    const refreshHomeContent = async () => {
-      try {
-        const content = await fetchHomeContentFromApi("/api/public/home");
-        if (mounted) {
-          setHomeContent(content);
-        }
-      } catch (error) {
-        console.error("No fue posible cargar Home desde la base de datos.", error);
+    refreshHomeContent();
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === HOME_CONTENT_STORAGE_KEY) {
+        refreshHomeContent();
       }
     };
 
-    void refreshHomeContent();
-
+    window.addEventListener(HOME_CONTENT_UPDATED_EVENT, refreshHomeContent);
+    window.addEventListener("storage", handleStorage);
     return () => {
-      mounted = false;
+      window.removeEventListener(HOME_CONTENT_UPDATED_EVENT, refreshHomeContent);
+      window.removeEventListener("storage", handleStorage);
     };
   }, []);
 
@@ -51,7 +56,7 @@ export default function HomePage() {
 
   return (
     <main className="bg-[#fcfaf7]">
-      <HeroCarousel homeContent={homeContent} />
+      <HeroCarousel />
 
       <div className="mx-auto flex w-full max-w-[1850px] flex-col gap-10 px-4 py-10 md:px-6 xl:px-10">
         <section className="relative overflow-hidden rounded-[32px] border border-black/8 bg-[#f5f1eb] p-6 md:p-8">
