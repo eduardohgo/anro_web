@@ -1,50 +1,24 @@
 "use client";
 
 import { Save } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   DEFAULT_HOME_CONTENT,
+  HOME_CONTENT_STORAGE_KEY,
   HomeContentConfig,
-  fetchHomeContentFromApi,
-  saveHomeContentToApi,
-  saveHomeContentToStorage,
+  parseStoredHomeContent,
 } from "@/lib/home-content";
 
 export default function HomeAdminClient() {
-  const [config, setConfig] = useState<HomeContentConfig>(DEFAULT_HOME_CONTENT);
+  const [config, setConfig] = useState<HomeContentConfig>(() => {
+    if (typeof window === "undefined") return DEFAULT_HOME_CONTENT;
+    return parseStoredHomeContent(window.localStorage.getItem(HOME_CONTENT_STORAGE_KEY));
+  });
 
-  useEffect(() => {
-    let mounted = true;
-
-    const loadConfig = async () => {
-      try {
-        const content = await fetchHomeContentFromApi("/api/admin/home");
-        if (mounted) {
-          setConfig(content);
-        }
-      } catch (error) {
-        console.error("No fue posible cargar Home en Editor rápido.", error);
-      }
-    };
-
-    void loadConfig();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  const saveChanges = async () => {
+  const saveChanges = () => {
     const next = { ...config, updatedAt: new Date().toISOString() };
     setConfig(next);
-
-    try {
-      const saved = await saveHomeContentToApi(next, "/api/admin/home");
-      setConfig(saved);
-    } catch (error) {
-      console.error("Fallo de guardado remoto, fallback local.", error);
-      saveHomeContentToStorage(next);
-    }
+    window.localStorage.setItem(HOME_CONTENT_STORAGE_KEY, JSON.stringify(next));
   };
 
   return (
