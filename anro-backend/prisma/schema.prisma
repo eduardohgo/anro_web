@@ -41,6 +41,18 @@ enum PodcastContentType {
   SHORT
 }
 
+enum PageContentStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum MediaAssetType {
+  IMAGE
+  VIDEO
+  DOCUMENT
+  OTHER
+}
+
 model AdminUser {
   id        String    @id @default(cuid())
   name      String
@@ -73,4 +85,27 @@ model PodcastEpisode {
   displayOrder     Int                @default(0)
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
+}
+
+model PageContent {
+  id          String            @id @default(cuid())
+  slug        String            @unique
+  title       String
+  content     Json
+  status      PageContentStatus @default(PUBLISHED)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  mediaAssets MediaAsset[]
+}
+
+model MediaAsset {
+  id            String         @id @default(cuid())
+  type          MediaAssetType @default(IMAGE)
+  url           String
+  alt           String?
+  metadata      Json?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  pageContent   PageContent?   @relation(fields: [pageContentId], references: [id])
+  pageContentId String?
 }
