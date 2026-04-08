@@ -9,6 +9,8 @@ import {
   HOME_CONTENT_UPDATED_EVENT,
   HOME_CONTENT_STORAGE_KEY,
   getHomeContentFromStorage,
+  resolveHomeContent,
+  saveHomeContentToStorage,
 } from "@/lib/home-content";
 
 export default function HomePage() {
@@ -19,7 +21,27 @@ export default function HomePage() {
       setHomeContent(getHomeContentFromStorage());
     };
 
+    const fetchHomeContentFromBackend = async () => {
+      try {
+        const response = await fetch("/api/public/home", {
+          method: "GET",
+          cache: "no-store",
+        });
+
+        if (!response.ok) {
+          return;
+        }
+
+        const payload = (await response.json()) as unknown;
+        const normalized = resolveHomeContent(payload);
+        saveHomeContentToStorage(normalized);
+      } catch {
+        // Se mantiene el fallback local.
+      }
+    };
+
     refreshHomeContent();
+    fetchHomeContentFromBackend();
 
     const handleStorage = (event: StorageEvent) => {
       if (event.key === HOME_CONTENT_STORAGE_KEY) {
