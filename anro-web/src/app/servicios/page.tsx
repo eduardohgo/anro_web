@@ -1,3 +1,4 @@
+//src/app/servicios/page.tsx
 import Image from "next/image";
 import Link from "next/link";
 
