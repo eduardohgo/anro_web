@@ -6,22 +6,16 @@ import { useEffect, useMemo, useState } from "react";
 import HeroCarousel from "@/components/Home/HeroCarousel";
 import {
   DEFAULT_HOME_CONTENT,
-  HOME_CONTENT_UPDATED_EVENT,
-  HOME_CONTENT_STORAGE_KEY,
-  getHomeContentFromStorage,
   resolveHomeContent,
-  saveHomeContentToStorage,
 } from "@/lib/home-content";
 
 export default function HomePage() {
   const [homeContent, setHomeContent] = useState(DEFAULT_HOME_CONTENT);
 
   useEffect(() => {
-    const refreshHomeContent = () => {
-      setHomeContent(getHomeContentFromStorage());
-    };
+    let mounted = true;
 
-    const fetchHomeContentFromBackend = async () => {
+    const fetchHomeContent = async () => {
       try {
         const response = await fetch("/api/public/home", {
           method: "GET",
@@ -29,31 +23,21 @@ export default function HomePage() {
         });
 
         if (!response.ok) {
-          return;
+          throw new Error("No fue posible cargar Home desde la API pública.");
         }
 
         const payload = (await response.json()) as unknown;
-        const normalized = resolveHomeContent(payload);
-        saveHomeContentToStorage(normalized);
-      } catch {
-        // Se mantiene el fallback local.
+        if (!mounted) return;
+        setHomeContent(resolveHomeContent(payload));
+      } catch (error) {
+        console.error("No fue posible cargar Home desde Neon.", error);
       }
     };
 
-    refreshHomeContent();
-    fetchHomeContentFromBackend();
+    void fetchHomeContent();
 
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key === HOME_CONTENT_STORAGE_KEY) {
-        refreshHomeContent();
-      }
-    };
-
-    window.addEventListener(HOME_CONTENT_UPDATED_EVENT, refreshHomeContent);
-    window.addEventListener("storage", handleStorage);
     return () => {
-      window.removeEventListener(HOME_CONTENT_UPDATED_EVENT, refreshHomeContent);
-      window.removeEventListener("storage", handleStorage);
+      mounted = false;
     };
   }, []);
 
