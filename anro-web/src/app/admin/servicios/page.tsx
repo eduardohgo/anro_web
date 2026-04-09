@@ -191,7 +191,6 @@ type ServicesContentConfig = {
   updatedAt: string;
 };
 
-const STORAGE_KEY = "anro:services-content";
 
 const DEFAULT_SERVICES_CONTENT: ServicesContentConfig = {
   hero: {
@@ -647,34 +646,6 @@ async function fetchServicesContentFromApi(
   return (await response.json()) as ServicesContentConfig;
 }
 
-function saveServicesContentToStorage(
-  content: ServicesContentConfig
-): ServicesContentConfig {
-  const next = {
-    ...content,
-    updatedAt: new Date().toISOString(),
-  };
-
-  if (typeof window !== "undefined") {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  }
-
-  return next;
-}
-
-function loadServicesContentFromStorage(): ServicesContentConfig | null {
-  if (typeof window === "undefined") return null;
-
-  const raw = window.localStorage.getItem(STORAGE_KEY);
-  if (!raw) return null;
-
-  try {
-    return JSON.parse(raw) as ServicesContentConfig;
-  } catch {
-    return null;
-  }
-}
-
 async function saveServicesContentToApi(
   content: ServicesContentConfig,
   endpoint = "/api/admin/servicios"
@@ -700,12 +671,7 @@ async function saveServicesContentToApi(
 async function persistServicesContent(
   content: ServicesContentConfig
 ): Promise<ServicesContentConfig> {
-  try {
-    return await saveServicesContentToApi(content);
-  } catch (error) {
-    console.error("No fue posible guardar en API, se usa localStorage.", error);
-    return saveServicesContentToStorage(content);
-  }
+  return saveServicesContentToApi(content);
 }
 
 function Field({
@@ -1609,10 +1575,6 @@ export default function AdminServiciosPage() {
         setLastUpdated(new Date(apiContent.updatedAt));
       } catch (error) {
         console.error("No fue posible cargar Servicios desde API.", error);
-        const localContent = loadServicesContentFromStorage();
-        if (!mounted || !localContent) return;
-        setContent(localContent);
-        setLastUpdated(new Date(localContent.updatedAt));
       }
     };
 
@@ -1643,8 +1605,8 @@ export default function AdminServiciosPage() {
     },
     {
       label: "Guardado actual",
-      value: "API / Local",
-      hint: "Intenta guardar por API y usa localStorage como respaldo.",
+      value: "API (Neon)",
+      hint: "Lectura y escritura exclusivas por API con persistencia en Neon.",
     },
     {
       label: "Última actualización",
@@ -2723,7 +2685,7 @@ export default function AdminServiciosPage() {
         <p className="mt-2">
           Este panel de Servicios ya quedó con la misma base visual del módulo Home y
           Desarrollo: hero superior, tarjetas de resumen, previews grandes, edición inline
-          y guardado preparado con intento por API y respaldo local.
+          y guardado exclusivo por API conectado a Neon.
         </p>
       </section>
     </div>

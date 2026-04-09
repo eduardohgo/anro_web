@@ -23,11 +23,10 @@ import type {
   ReactNode,
   SetStateAction,
 } from "react";
-import { useMemo, useState } from "react"; 
+import { useEffect, useMemo, useState } from "react"; 
 import {
   DEFAULT_HOME_CONTENT,
-  getHomeContentFromStorage,
-  saveHomeContentToStorage,
+  resolveHomeContent,
   type HomeContentConfig,
 } from "@/lib/home-content";
 
@@ -472,9 +471,21 @@ function buildHomeContentFromModules(currentModules: HomeModule[]): HomeContentC
   return base;
 }
 
-function persistHomeContent(currentModules: HomeModule[]) {
+async function persistHomeContent(currentModules: HomeModule[]) {
   const nextHomeContent = buildHomeContentFromModules(currentModules);
-  return saveHomeContentToStorage(nextHomeContent);
+
+  const response = await fetch("/api/admin/home", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(nextHomeContent),
+  });
+
+  if (!response.ok) {
+    throw new Error("No fue posible guardar Home en la API.");
+  }
+
+  const payload = (await response.json()) as unknown;
+  return resolveHomeContent(payload);
 }
 
 function Field({
@@ -2016,13 +2027,7 @@ function renderModuleEditor(
 }
 
 export default function AdminHomePage() {
-  const initialHomeContent = useMemo(
-    () =>
-      typeof window === "undefined"
-        ? DEFAULT_HOME_CONTENT
-        : getHomeContentFromStorage(),
-    []
-  );
+  const initialHomeContent = useMemo(() => DEFAULT_HOME_CONTENT, []);
   const [modules, setModules] = useState<HomeModule[]>(() =>
     createModulesFromHomeContent(initialHomeContent)
   );
@@ -2032,6 +2037,34 @@ export default function AdminHomePage() {
         ? new Date(initialHomeContent.updatedAt)
         : new Date()
   );
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadHomeFromApi = async () => {
+      try {
+        const response = await fetch("/api/admin/home", { cache: "no-store" });
+        if (!response.ok) {
+          throw new Error("No fue posible cargar Home desde la API.");
+        }
+
+        const payload = (await response.json()) as unknown;
+        const normalized = resolveHomeContent(payload);
+        if (!mounted) return;
+
+        setModules(createModulesFromHomeContent(normalized));
+        setLastUpdated(new Date(normalized.updatedAt));
+      } catch (error) {
+        console.error("No fue posible cargar Home desde Neon.", error);
+      }
+    };
+
+    void loadHomeFromApi();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const heroModule = useMemo(
     () => modules.find((module) => module.key === "hero") ?? null,
@@ -2091,7 +2124,7 @@ export default function AdminHomePage() {
     setIsInlineHeroEditing(false);
   };
 
-  const saveInlineHeroEditor = () => {
+  const saveInlineHeroEditor = async () => {
     if (!inlineHeroDraft) return;
 
     const nextModules = modules.map((module) =>
@@ -2101,7 +2134,7 @@ export default function AdminHomePage() {
     );
 
     setModules(nextModules);
-    const savedContent = persistHomeContent(nextModules);
+    const savedContent = await persistHomeContent(nextModules);
     setLastUpdated(new Date(savedContent.updatedAt));
     setIsInlineHeroEditing(false);
   };
@@ -2135,7 +2168,7 @@ export default function AdminHomePage() {
     setIsInlineDesarrolloEditing(false);
   };
 
-  const saveInlineDesarrolloEditor = () => {
+  const saveInlineDesarrolloEditor = async () => {
     if (!inlineDesarrolloDraft) return;
 
     const nextModules = modules.map((module) =>
@@ -2145,7 +2178,7 @@ export default function AdminHomePage() {
     );
 
     setModules(nextModules);
-    const savedContent = persistHomeContent(nextModules);
+    const savedContent = await persistHomeContent(nextModules);
     setLastUpdated(new Date(savedContent.updatedAt));
     setIsInlineDesarrolloEditing(false);
   };
@@ -2179,7 +2212,7 @@ export default function AdminHomePage() {
     setIsInlineServiciosEditing(false);
   };
 
-  const saveInlineServiciosEditor = () => {
+  const saveInlineServiciosEditor = async () => {
     if (!inlineServiciosDraft) return;
 
     const nextModules = modules.map((module) =>
@@ -2189,7 +2222,7 @@ export default function AdminHomePage() {
     );
 
     setModules(nextModules);
-    const savedContent = persistHomeContent(nextModules);
+    const savedContent = await persistHomeContent(nextModules);
     setLastUpdated(new Date(savedContent.updatedAt));
     setIsInlineServiciosEditing(false);
   };
@@ -2223,7 +2256,7 @@ export default function AdminHomePage() {
     setIsInlineCompromisoEditing(false);
   };
 
-  const saveInlineCompromisoEditor = () => {
+  const saveInlineCompromisoEditor = async () => {
     if (!inlineCompromisoDraft) return;
 
     const nextModules = modules.map((module) =>
@@ -2233,7 +2266,7 @@ export default function AdminHomePage() {
     );
 
     setModules(nextModules);
-    const savedContent = persistHomeContent(nextModules);
+    const savedContent = await persistHomeContent(nextModules);
     setLastUpdated(new Date(savedContent.updatedAt));
     setIsInlineCompromisoEditing(false);
   };
@@ -2267,7 +2300,7 @@ export default function AdminHomePage() {
     setIsInlineCtaEditing(false);
   };
 
-  const saveInlineCtaEditor = () => {
+  const saveInlineCtaEditor = async () => {
     if (!inlineCtaDraft) return;
 
     const nextModules = modules.map((module) =>
@@ -2277,7 +2310,7 @@ export default function AdminHomePage() {
     );
 
     setModules(nextModules);
-    const savedContent = persistHomeContent(nextModules);
+    const savedContent = await persistHomeContent(nextModules);
     setLastUpdated(new Date(savedContent.updatedAt));
     setIsInlineCtaEditing(false);
   };
@@ -2500,7 +2533,7 @@ export default function AdminHomePage() {
       <section className="rounded-2xl border border-[#e4dbcf] bg-[#fffdf9] p-5 text-sm leading-7 text-slate-600">
         <p className="font-semibold text-[#142033]">Guardado actual</p>
         <p className="mt-2">
-          Por ahora los cambios se están guardando en <span className="font-semibold">localStorage</span>.
+          Los cambios se guardan exclusivamente por API en Neon mediante Prisma.
           Las imágenes nuevas que subas también se guardarán ahí como base64 temporalmente.
           Más adelante ya las podemos migrar a backend + almacenamiento real.
         </p>

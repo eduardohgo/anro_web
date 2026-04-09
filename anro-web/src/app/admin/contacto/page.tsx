@@ -195,7 +195,6 @@ type ContactContentConfig = {
   updatedAt: string;
 };
 
-const STORAGE_KEY = "anro:contact-content";
 
 const DEFAULT_CONTACT_CONTENT: ContactContentConfig = {
   hero: {
@@ -579,34 +578,6 @@ async function fetchContactContentFromApi(
   return (await response.json()) as ContactContentConfig;
 }
 
-function saveContactContentToStorage(
-  content: ContactContentConfig
-): ContactContentConfig {
-  const next = {
-    ...content,
-    updatedAt: new Date().toISOString(),
-  };
-
-  if (typeof window !== "undefined") {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  }
-
-  return next;
-}
-
-function loadContactContentFromStorage(): ContactContentConfig | null {
-  if (typeof window === "undefined") return null;
-
-  const raw = window.localStorage.getItem(STORAGE_KEY);
-  if (!raw) return null;
-
-  try {
-    return JSON.parse(raw) as ContactContentConfig;
-  } catch {
-    return null;
-  }
-}
-
 async function saveContactContentToApi(
   content: ContactContentConfig,
   endpoint = "/api/admin/contacto"
@@ -632,12 +603,7 @@ async function saveContactContentToApi(
 async function persistContactContent(
   content: ContactContentConfig
 ): Promise<ContactContentConfig> {
-  try {
-    return await saveContactContentToApi(content);
-  } catch (error) {
-    console.error("No fue posible guardar en API, se usa localStorage.", error);
-    return saveContactContentToStorage(content);
-  }
+  return saveContactContentToApi(content);
 }
 
 function Field({
@@ -1489,10 +1455,6 @@ export default function AdminContactoPage() {
         setLastUpdated(new Date(apiContent.updatedAt));
       } catch (error) {
         console.error("No fue posible cargar Contacto desde API.", error);
-        const localContent = loadContactContentFromStorage();
-        if (!mounted || !localContent) return;
-        setContent(localContent);
-        setLastUpdated(new Date(localContent.updatedAt));
       }
     };
 
@@ -1523,8 +1485,8 @@ export default function AdminContactoPage() {
     },
     {
       label: "Guardado actual",
-      value: "API / Local",
-      hint: "Intenta guardar por API y usa localStorage como respaldo.",
+      value: "API (Neon)",
+      hint: "Lectura y escritura exclusivas por API con persistencia en Neon.",
     },
     {
       label: "Última actualización",
@@ -2512,7 +2474,7 @@ export default function AdminContactoPage() {
         <p className="mt-2">
           Este panel de Contacto ya quedó con la misma base visual que Home,
           Desarrollo y Servicios: resumen superior, previews grandes, edición
-          inline por sección y guardado preparado con intento por API y respaldo
+          inline por sección y guardado exclusivo por API conectado a Neon
           local.
         </p>
       </section>

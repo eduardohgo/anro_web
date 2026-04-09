@@ -206,7 +206,6 @@ type DesarrolloContentConfig = {
   updatedAt: string;
 };
 
-const STORAGE_KEY = "anro:desarrollo-content";
 
 const DEFAULT_DESARROLLO_CONTENT: DesarrolloContentConfig = {
   hero: {
@@ -594,34 +593,6 @@ async function fetchDesarrolloContentFromApi(
   return (await response.json()) as DesarrolloContentConfig;
 }
 
-function saveDesarrolloContentToStorage(
-  content: DesarrolloContentConfig
-): DesarrolloContentConfig {
-  const next = {
-    ...content,
-    updatedAt: new Date().toISOString(),
-  };
-
-  if (typeof window !== "undefined") {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  }
-
-  return next;
-}
-
-function loadDesarrolloContentFromStorage(): DesarrolloContentConfig | null {
-  if (typeof window === "undefined") return null;
-
-  const raw = window.localStorage.getItem(STORAGE_KEY);
-  if (!raw) return null;
-
-  try {
-    return JSON.parse(raw) as DesarrolloContentConfig;
-  } catch {
-    return null;
-  }
-}
-
 async function saveDesarrolloContentToApi(
   content: DesarrolloContentConfig,
   endpoint = "/api/admin/desarrollo"
@@ -647,12 +618,7 @@ async function saveDesarrolloContentToApi(
 async function persistDesarrolloContent(
   content: DesarrolloContentConfig
 ): Promise<DesarrolloContentConfig> {
-  try {
-    return await saveDesarrolloContentToApi(content);
-  } catch (error) {
-    console.error("No fue posible guardar en API, se usa localStorage.", error);
-    return saveDesarrolloContentToStorage(content);
-  }
+  return saveDesarrolloContentToApi(content);
 }
 
 function Field({
@@ -1522,10 +1488,6 @@ export default function AdminDesarrolloPage() {
         setLastUpdated(new Date(apiContent.updatedAt));
       } catch (error) {
         console.error("No fue posible cargar Desarrollo desde API.", error);
-        const localContent = loadDesarrolloContentFromStorage();
-        if (!mounted || !localContent) return;
-        setContent(localContent);
-        setLastUpdated(new Date(localContent.updatedAt));
       }
     };
 
@@ -1556,8 +1518,8 @@ export default function AdminDesarrolloPage() {
     },
     {
       label: "Guardado actual",
-      value: "API / Local",
-      hint: "Intenta guardar por API y usa localStorage como respaldo.",
+      value: "API (Neon)",
+      hint: "Lectura y escritura exclusivas por API con persistencia en Neon.",
     },
     {
       label: "Última actualización",
@@ -3108,7 +3070,7 @@ export default function AdminDesarrolloPage() {
         <p className="mt-2">
           Este panel de Desarrollo ya quedó con la misma base visual del módulo Home:
           hero superior, tarjetas de resumen, previews grandes, edición inline y guardado
-          preparado con intento por API y respaldo local.
+          preparado con lectura y escritura exclusiva por API conectada a Neon.
         </p>
       </section>
     </div>

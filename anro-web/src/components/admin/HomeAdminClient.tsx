@@ -1,24 +1,54 @@
 "use client";
 
 import { Save } from "lucide-react";
-import { useState } from "react";
-import {
-  DEFAULT_HOME_CONTENT,
-  HOME_CONTENT_STORAGE_KEY,
-  HomeContentConfig,
-  parseStoredHomeContent,
-} from "@/lib/home-content";
+import { useEffect, useState } from "react";
+import { DEFAULT_HOME_CONTENT, HomeContentConfig, resolveHomeContent } from "@/lib/home-content";
 
 export default function HomeAdminClient() {
-  const [config, setConfig] = useState<HomeContentConfig>(() => {
-    if (typeof window === "undefined") return DEFAULT_HOME_CONTENT;
-    return parseStoredHomeContent(window.localStorage.getItem(HOME_CONTENT_STORAGE_KEY));
-  });
+  const [config, setConfig] = useState<HomeContentConfig>(DEFAULT_HOME_CONTENT);
 
-  const saveChanges = () => {
+  useEffect(() => {
+    let mounted = true;
+
+    const loadContent = async () => {
+      try {
+        const response = await fetch("/api/admin/home", { cache: "no-store" });
+        if (!response.ok) return;
+
+        const payload = (await response.json()) as unknown;
+        if (!mounted) return;
+        setConfig(resolveHomeContent(payload));
+      } catch (error) {
+        console.error("No fue posible cargar Home desde la API.", error);
+      }
+    };
+
+    void loadContent();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const saveChanges = async () => {
     const next = { ...config, updatedAt: new Date().toISOString() };
-    setConfig(next);
-    window.localStorage.setItem(HOME_CONTENT_STORAGE_KEY, JSON.stringify(next));
+
+    try {
+      const response = await fetch("/api/admin/home", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(next),
+      });
+
+      if (!response.ok) {
+        throw new Error("No fue posible guardar Home desde este editor rápido.");
+      }
+
+      const payload = (await response.json()) as unknown;
+      setConfig(resolveHomeContent(payload));
+    } catch (error) {
+      console.error("No fue posible guardar Home en Neon.", error);
+    }
   };
 
   return (

@@ -6,10 +6,9 @@ import { useEffect, useState } from "react";
 import { MapPinIcon } from "@heroicons/react/24/outline";
 import {
   DEFAULT_HOME_CONTENT,
-  HOME_CONTENT_STORAGE_KEY,
   HomeHeroSection,
   HomeHeroSlide,
-  parseStoredHomeContent,
+  resolveHomeContent,
 } from "@/lib/home-content";
 
 export default function HeroCarousel() {
@@ -18,16 +17,32 @@ export default function HeroCarousel() {
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
-    const applyContent = () => {
-      const config = parseStoredHomeContent(window.localStorage.getItem(HOME_CONTENT_STORAGE_KEY));
-      setSlides(config.heroSlides);
-      setHeroSection(config.heroSection);
-      setIndex((current) => (current >= config.heroSlides.length ? 0 : current));
+    let mounted = true;
+
+    const applyContent = async () => {
+      try {
+        const response = await fetch("/api/public/home", { cache: "no-store" });
+        if (!response.ok) {
+          throw new Error("No fue posible cargar contenido de Home.");
+        }
+
+        const payload = (await response.json()) as unknown;
+        const config = resolveHomeContent(payload);
+
+        if (!mounted) return;
+        setSlides(config.heroSlides);
+        setHeroSection(config.heroSection);
+        setIndex((current) => (current >= config.heroSlides.length ? 0 : current));
+      } catch (error) {
+        console.error("No fue posible cargar el Hero desde Neon.", error);
+      }
     };
 
-    applyContent();
-    window.addEventListener("storage", applyContent);
-    return () => window.removeEventListener("storage", applyContent);
+    void applyContent();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   useEffect(() => {
