@@ -1,25 +1,36 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Hammer, HeartHandshake, ShieldCheck, Target } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import type { NosotrosContent } from "@/lib/nosotros-content";
-import { DEFAULT_NOSOTROS_CONTENT, resolveNosotrosContent } from "@/lib/nosotros-content";
+import { resolveNosotrosContent } from "@/lib/nosotros-content";
 
 const pillarIcons = [Target, Hammer, HeartHandshake, ShieldCheck];
 
 export default function NosotrosPage() {
-  const [content, setContent] = useState<NosotrosContent>(DEFAULT_NOSOTROS_CONTENT);
+  const [content, setContent] = useState<any | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
       const response = await fetch("/api/public/nosotros", { cache: "no-store" });
+      if (!response.ok) throw new Error("No fue posible cargar Nosotros.");
       const payload = await response.json();
       setContent(resolveNosotrosContent(payload));
     };
 
-    void load();
+    void load().catch((error) => setLoadError(error instanceof Error ? error.message : "Error desconocido"));
   }, []);
+
+  if (loadError) {
+    return <main className="p-10 text-center">{loadError}</main>;
+  }
+
+  if (!content) {
+    return <main className="p-10 text-center">Cargando Nosotros...</main>;
+  }
 
   const pillars = useMemo(
     () =>
