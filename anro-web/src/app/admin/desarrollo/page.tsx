@@ -1475,6 +1475,7 @@ export default function AdminDesarrolloPage() {
   const [galeriaDraft, setGaleriaDraft] = useState<GalleryContent | null>(null);
 
   const [isCtaEditing, setIsCtaEditing] = useState(false);
+  const [saveFeedback, setSaveFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [ctaDraft, setCtaDraft] = useState<CtaContent | null>(null);
 
   useEffect(() => {
@@ -1500,9 +1501,17 @@ export default function AdminDesarrolloPage() {
 
   async function applyAndPersist(nextContent: DesarrolloContentConfig) {
     setContent(nextContent);
-    const saved = await persistDesarrolloContent(nextContent);
-    setContent(saved);
-    setLastUpdated(new Date(saved.updatedAt));
+    setSaveFeedback(null);
+
+    try {
+      const saved = await persistDesarrolloContent(nextContent);
+      setContent(saved);
+      setLastUpdated(new Date(saved.updatedAt));
+      setSaveFeedback({ type: "success", text: "Cambios guardados correctamente" });
+    } catch {
+      setSaveFeedback({ type: "error", text: "No fue posible guardar los cambios" });
+      throw new Error("No fue posible guardar los cambios");
+    }
   }
 
   const overviewCards = [
@@ -1561,6 +1570,16 @@ export default function AdminDesarrolloPage() {
         ))}
       </section>
 
+
+      {saveFeedback ? (
+        <div className={`rounded-2xl px-4 py-3 text-sm font-medium ${
+          saveFeedback.type === "success"
+            ? "border border-[#d8e4d6] bg-[#f3faf1] text-[#234128]"
+            : "border border-[#f1d1d1] bg-[#fff5f5] text-[#7a1f1f]"
+        }`}>
+          {saveFeedback.text}
+        </div>
+      ) : null}
       <InlineEditorShell
         badge="Bloque superior"
         title="Hero interno del desarrollo"
