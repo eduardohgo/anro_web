@@ -4,8 +4,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-
-type DesarrolloContent = any;
+import {
+  type DesarrolloContent,
+  resolveDesarrolloContent,
+} from "@/lib/public-page-content";
 
 export default function DesarrolloPage() {
   const [content, setContent] = useState<DesarrolloContent | null>(null);
@@ -16,7 +18,8 @@ export default function DesarrolloPage() {
       try {
         const response = await fetch("/api/public/desarrollo", { cache: "no-store" });
         if (!response.ok) throw new Error("No fue posible cargar Desarrollo.");
-        setContent(await response.json());
+        const payload = (await response.json()) as unknown;
+        setContent(resolveDesarrolloContent(payload));
       } catch (err) {
         setError(err instanceof Error ? err.message : "Error desconocido");
       }
@@ -49,7 +52,7 @@ export default function DesarrolloPage() {
       </section>
 
       <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {content.benefits.cards.map((card: any) => (
+        {content.benefits.cards.map((card) => (
           <article key={card.id} className="rounded-2xl border bg-white p-5">
             <p className="text-xs uppercase tracking-[0.2em] text-[#a87911]">{card.badge}</p>
             <h3 className="mt-2 text-xl font-bold">{card.title}</h3>
@@ -61,7 +64,7 @@ export default function DesarrolloPage() {
       <section className="rounded-[30px] bg-[#1f1a17] p-8 text-white">
         <h2 className="text-3xl font-bold">{content.cta.title}</h2>
         <div className="mt-5 flex flex-wrap gap-3">
-          {content.cta.buttons.map((btn: any) => (
+          {content.cta.buttons.map((btn) => (
             <Link key={btn.id} href={btn.link} className="rounded-2xl bg-[#d4a62a] px-5 py-3 font-semibold text-black">{btn.text}</Link>
           ))}
         </div>

@@ -3,8 +3,10 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-
-type ContactoContent = any;
+import {
+  type ContactoContent,
+  resolveContactoContent,
+} from "@/lib/public-page-content";
 
 export default function ContactoPage() {
   const [content, setContent] = useState<ContactoContent | null>(null);
@@ -15,7 +17,8 @@ export default function ContactoPage() {
       try {
         const response = await fetch("/api/public/contacto", { cache: "no-store" });
         if (!response.ok) throw new Error("No fue posible cargar Contacto.");
-        setContent(await response.json());
+        const payload = (await response.json()) as unknown;
+        setContent(resolveContactoContent(payload));
       } catch (err) {
         setError(err instanceof Error ? err.message : "Error desconocido");
       }
@@ -35,7 +38,7 @@ export default function ContactoPage() {
       </section>
 
       <section className="grid gap-4 md:grid-cols-3">
-        {content.channels.cards.map((card: any) => (
+        {content.channels.cards.map((card) => (
           <article key={card.id} className="rounded-2xl border bg-white p-5">
             <p className="text-xs uppercase tracking-[0.2em] text-[#9A7647]">{card.badge}</p>
             <h3 className="mt-2 text-xl font-bold text-[#4B392D]">{card.title}</h3>
