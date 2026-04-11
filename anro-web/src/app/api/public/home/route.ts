@@ -1,11 +1,16 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
-import { DEFAULT_HOME_CONTENT, resolveHomeContent } from "@/lib/home-content";
+import { resolveHomeContent } from "@/lib/home-content";
 import { getPageContent } from "@/lib/page-content";
 
 export async function GET() {
   try {
     const content = await getPageContent<unknown>("home");
-    return NextResponse.json(resolveHomeContent(content ?? DEFAULT_HOME_CONTENT));
+    if (!content) {
+      return NextResponse.json({ message: "No hay contenido público de Home." }, { status: 404 });
+    }
+    return NextResponse.json(resolveHomeContent(content));
   } catch (error) {
     return NextResponse.json(
       {

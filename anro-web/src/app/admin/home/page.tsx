@@ -2108,6 +2108,7 @@ export default function AdminHomePage() {
 
   const [isInlineCtaEditing, setIsInlineCtaEditing] = useState(false);
   const [inlineCtaDraft, setInlineCtaDraft] = useState<CtaContent | null>(null);
+  const [saveFeedback, setSaveFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const openInlineHeroEditor = () => {
     if (!heroModule || !isHeroContent(heroModule.content)) return;
@@ -2134,8 +2135,16 @@ export default function AdminHomePage() {
     );
 
     setModules(nextModules);
-    const savedContent = await persistHomeContent(nextModules);
-    setLastUpdated(new Date(savedContent.updatedAt));
+    setSaveFeedback(null);
+
+    try {
+      const savedContent = await persistHomeContent(nextModules);
+      setLastUpdated(new Date(savedContent.updatedAt));
+      setSaveFeedback({ type: "success", text: "Cambios guardados correctamente" });
+    } catch {
+      setSaveFeedback({ type: "error", text: "No fue posible guardar los cambios" });
+      throw new Error("No fue posible guardar los cambios");
+    }
     setIsInlineHeroEditing(false);
   };
 
@@ -2178,8 +2187,16 @@ export default function AdminHomePage() {
     );
 
     setModules(nextModules);
-    const savedContent = await persistHomeContent(nextModules);
-    setLastUpdated(new Date(savedContent.updatedAt));
+    setSaveFeedback(null);
+
+    try {
+      const savedContent = await persistHomeContent(nextModules);
+      setLastUpdated(new Date(savedContent.updatedAt));
+      setSaveFeedback({ type: "success", text: "Cambios guardados correctamente" });
+    } catch {
+      setSaveFeedback({ type: "error", text: "No fue posible guardar los cambios" });
+      throw new Error("No fue posible guardar los cambios");
+    }
     setIsInlineDesarrolloEditing(false);
   };
 
@@ -2222,8 +2239,16 @@ export default function AdminHomePage() {
     );
 
     setModules(nextModules);
-    const savedContent = await persistHomeContent(nextModules);
-    setLastUpdated(new Date(savedContent.updatedAt));
+    setSaveFeedback(null);
+
+    try {
+      const savedContent = await persistHomeContent(nextModules);
+      setLastUpdated(new Date(savedContent.updatedAt));
+      setSaveFeedback({ type: "success", text: "Cambios guardados correctamente" });
+    } catch {
+      setSaveFeedback({ type: "error", text: "No fue posible guardar los cambios" });
+      throw new Error("No fue posible guardar los cambios");
+    }
     setIsInlineServiciosEditing(false);
   };
 
@@ -2266,8 +2291,16 @@ export default function AdminHomePage() {
     );
 
     setModules(nextModules);
-    const savedContent = await persistHomeContent(nextModules);
-    setLastUpdated(new Date(savedContent.updatedAt));
+    setSaveFeedback(null);
+
+    try {
+      const savedContent = await persistHomeContent(nextModules);
+      setLastUpdated(new Date(savedContent.updatedAt));
+      setSaveFeedback({ type: "success", text: "Cambios guardados correctamente" });
+    } catch {
+      setSaveFeedback({ type: "error", text: "No fue posible guardar los cambios" });
+      throw new Error("No fue posible guardar los cambios");
+    }
     setIsInlineCompromisoEditing(false);
   };
 
@@ -2310,8 +2343,16 @@ export default function AdminHomePage() {
     );
 
     setModules(nextModules);
-    const savedContent = await persistHomeContent(nextModules);
-    setLastUpdated(new Date(savedContent.updatedAt));
+    setSaveFeedback(null);
+
+    try {
+      const savedContent = await persistHomeContent(nextModules);
+      setLastUpdated(new Date(savedContent.updatedAt));
+      setSaveFeedback({ type: "success", text: "Cambios guardados correctamente" });
+    } catch {
+      setSaveFeedback({ type: "error", text: "No fue posible guardar los cambios" });
+      throw new Error("No fue posible guardar los cambios");
+    }
     setIsInlineCtaEditing(false);
   };
 
@@ -2387,6 +2428,18 @@ export default function AdminHomePage() {
           </article>
         ))}
       </section>
+
+      {saveFeedback ? (
+        <div
+          className={`rounded-2xl px-4 py-3 text-sm font-medium ${
+            saveFeedback.type === "success"
+              ? "border border-[#d8e4d6] bg-[#f3faf1] text-[#234128]"
+              : "border border-[#f1d1d1] bg-[#fff5f5] text-[#7a1f1f]"
+          }`}
+        >
+          {saveFeedback.text}
+        </div>
+      ) : null}
 
       {heroModule && isHeroContent(heroModule.content) && (
         <InlineEditorShell

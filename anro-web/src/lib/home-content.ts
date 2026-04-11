@@ -1,4 +1,3 @@
-export const HOME_CONTENT_STORAGE_KEY = "anro-home-content";
 export const HOME_CONTENT_UPDATED_EVENT = "anro-home-content-updated";
 
 export interface HomeHeroSlide {
@@ -623,57 +622,4 @@ export function resolveHomeContent(raw: unknown): HomeContentConfig {
     ctaSection: sanitizeCtaSection(source.ctaSection),
     updatedAt: text(source.updatedAt, DEFAULT_HOME_CONTENT.updatedAt),
   };
-}
-
-export function parseStoredHomeContent(value: string | null): HomeContentConfig {
-  if (!value) return structuredClone(DEFAULT_HOME_CONTENT);
-
-  try {
-    return resolveHomeContent(JSON.parse(value) as unknown);
-  } catch {
-    return structuredClone(DEFAULT_HOME_CONTENT);
-  }
-}
-
-function isBrowser() {
-  return typeof window !== "undefined";
-}
-
-export function mergeHomeContentWithDefaults(raw: unknown): HomeContentConfig {
-  return resolveHomeContent(raw);
-}
-
-export function getHomeContentFromStorage(): HomeContentConfig {
-  if (!isBrowser()) return structuredClone(DEFAULT_HOME_CONTENT);
-  return parseStoredHomeContent(window.localStorage.getItem(HOME_CONTENT_STORAGE_KEY));
-}
-
-export function saveHomeContentToStorage(
-  content: HomeContentConfig,
-  { dispatchEvent = true }: { dispatchEvent?: boolean } = {}
-): HomeContentConfig {
-  const normalizedContent = resolveHomeContent({
-    ...content,
-    updatedAt: new Date().toISOString(),
-  });
-
-  if (!isBrowser()) return normalizedContent;
-
-  window.localStorage.setItem(
-    HOME_CONTENT_STORAGE_KEY,
-    JSON.stringify(normalizedContent)
-  );
-
-  if (dispatchEvent) {
-    window.dispatchEvent(new CustomEvent(HOME_CONTENT_UPDATED_EVENT));
-  }
-
-  return normalizedContent;
-}
-
-export function resetHomeContentInStorage(
-  { dispatchEvent = true }: { dispatchEvent?: boolean } = {}
-): HomeContentConfig {
-  const resetContent = structuredClone(DEFAULT_HOME_CONTENT);
-  return saveHomeContentToStorage(resetContent, { dispatchEvent });
 }

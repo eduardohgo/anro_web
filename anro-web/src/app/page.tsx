@@ -1,16 +1,15 @@
 "use client";
 
+
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import HeroCarousel from "@/components/Home/HeroCarousel";
-import {
-  DEFAULT_HOME_CONTENT,
-  resolveHomeContent,
-} from "@/lib/home-content";
+import { resolveHomeContent } from "@/lib/home-content";
 
 export default function HomePage() {
-  const [homeContent, setHomeContent] = useState(DEFAULT_HOME_CONTENT);
+  const [homeContent, setHomeContent] = useState<any | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -30,7 +29,8 @@ export default function HomePage() {
         if (!mounted) return;
         setHomeContent(resolveHomeContent(payload));
       } catch (error) {
-        console.error("No fue posible cargar Home desde Neon.", error);
+        if (!mounted) return;
+        setLoadError(error instanceof Error ? error.message : "Error desconocido");
       }
     };
 
@@ -40,6 +40,14 @@ export default function HomePage() {
       mounted = false;
     };
   }, []);
+
+  if (loadError) {
+    return <main className="p-10 text-center">{loadError}</main>;
+  }
+
+  if (!homeContent) {
+    return <main className="p-10 text-center">Cargando Home...</main>;
+  }
 
   const developmentCards = useMemo(
     () =>

@@ -41,11 +41,18 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     }
   }
 
-  const response = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers,
-    cache: "no-store",
-  });
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      ...options,
+      headers,
+      cache: "no-store",
+    });
+  } catch {
+    const fetchFailedMessage = `No fue posible conectar con el backend (${API_URL}). Verifica NEXT_PUBLIC_API_URL y que el servidor esté activo.`;
+    throw new ApiError(fetchFailedMessage, 503);
+  }
 
   const data = await parseResponse(response);
 
