@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 
-export type SupportedPageKey = "home" | "desarrollo" | "servicios" | "contacto";
+export type SupportedPageKey = "home" | "desarrollo" | "servicios" | "contacto" | "nosotros";
 
 export async function getPageContent<T>(pageKey: SupportedPageKey): Promise<T | null> {
   const row = await prisma.pageContent.findUnique({ where: { pageKey } });
