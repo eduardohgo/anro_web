@@ -5,10 +5,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import HeroCarousel from "@/components/Home/HeroCarousel";
-import { resolveHomeContent } from "@/lib/home-content";
+import { type HomeContentConfig, resolveHomeContent } from "@/lib/home-content";
 
 export default function HomePage() {
-  const [homeContent, setHomeContent] = useState<any | null>(null);
+  const [homeContent, setHomeContent] = useState<HomeContentConfig | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -41,6 +41,26 @@ export default function HomePage() {
     };
   }, []);
 
+  const developmentCards = useMemo(
+    () =>
+      homeContent
+        ? [...homeContent.developmentSection.cards]
+            .filter((card) => card.active)
+            .sort((a, b) => a.order - b.order)
+        : [],
+    [homeContent]
+  );
+
+  const serviceCards = useMemo(
+    () =>
+      homeContent
+        ? [...homeContent.servicesSection.cards]
+            .filter((card) => card.active)
+            .sort((a, b) => a.order - b.order)
+        : [],
+    [homeContent]
+  );
+
   if (loadError) {
     return <main className="p-10 text-center">{loadError}</main>;
   }
@@ -48,22 +68,6 @@ export default function HomePage() {
   if (!homeContent) {
     return <main className="p-10 text-center">Cargando Home...</main>;
   }
-
-  const developmentCards = useMemo(
-    () =>
-      [...homeContent.developmentSection.cards]
-        .filter((card) => card.active)
-        .sort((a, b) => a.order - b.order),
-    [homeContent.developmentSection.cards]
-  );
-
-  const serviceCards = useMemo(
-    () =>
-      [...homeContent.servicesSection.cards]
-        .filter((card) => card.active)
-        .sort((a, b) => a.order - b.order),
-    [homeContent.servicesSection.cards]
-  );
 
   const commitment = homeContent.commitmentSection;
   const cta = homeContent.ctaSection;

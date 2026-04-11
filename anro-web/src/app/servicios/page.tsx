@@ -4,8 +4,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-
-type ServiciosContent = any;
+import {
+  type ServiciosContent,
+  resolveServiciosContent,
+} from "@/lib/public-page-content";
 
 export default function ServiciosPage() {
   const [content, setContent] = useState<ServiciosContent | null>(null);
@@ -16,7 +18,8 @@ export default function ServiciosPage() {
       try {
         const response = await fetch("/api/public/servicios", { cache: "no-store" });
         if (!response.ok) throw new Error("No fue posible cargar Servicios.");
-        setContent(await response.json());
+        const payload = (await response.json()) as unknown;
+        setContent(resolveServiciosContent(payload));
       } catch (err) {
         setError(err instanceof Error ? err.message : "Error desconocido");
       }
@@ -39,7 +42,7 @@ export default function ServiciosPage() {
       </section>
 
       <section className="space-y-4">
-        {content.servicesDetailed.items.map((service: any) => (
+        {content.servicesDetailed.items.map((service) => (
           <article key={service.id} className="grid overflow-hidden rounded-3xl border bg-white lg:grid-cols-2">
             <div className="relative min-h-[280px]"><Image src={service.image} alt={service.title} fill className="object-cover" /></div>
             <div className="p-6">
