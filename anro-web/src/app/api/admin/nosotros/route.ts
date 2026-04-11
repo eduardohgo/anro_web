@@ -1,5 +1,7 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
-import { DEFAULT_NOSOTROS_CONTENT, resolveNosotrosContent } from "@/lib/nosotros-content";
+import { resolveNosotrosContent } from "@/lib/nosotros-content";
 import { getPageContent, upsertPageContent } from "@/lib/page-content";
 
 const PAGE_KEY = "nosotros" as const;
@@ -7,7 +9,10 @@ const PAGE_KEY = "nosotros" as const;
 export async function GET() {
   try {
     const content = await getPageContent<unknown>(PAGE_KEY);
-    return NextResponse.json(resolveNosotrosContent(content ?? DEFAULT_NOSOTROS_CONTENT));
+    if (!content) {
+      return NextResponse.json({ message: "No hay contenido guardado para Nosotros." }, { status: 404 });
+    }
+    return NextResponse.json(resolveNosotrosContent(content));
   } catch (error) {
     return NextResponse.json(
       { message: "No fue posible cargar Nosotros.", details: error instanceof Error ? error.message : String(error) },

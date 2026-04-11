@@ -1,34 +1,54 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, Hammer, HeartHandshake, ShieldCheck, Target } from "lucide-react";
+import {
+  ArrowRight,
+  CheckCircle2,
+  Hammer,
+  HeartHandshake,
+  ShieldCheck,
+  Target,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import type { NosotrosContent } from "@/lib/nosotros-content";
-import { DEFAULT_NOSOTROS_CONTENT, resolveNosotrosContent } from "@/lib/nosotros-content";
+import type { NosotrosContent, NosotrosPillar, NosotrosStrength, NosotrosValue, NosotrosAboutCard } from "@/lib/nosotros-content";
+import { resolveNosotrosContent } from "@/lib/nosotros-content";
 
 const pillarIcons = [Target, Hammer, HeartHandshake, ShieldCheck];
 
 export default function NosotrosPage() {
-  const [content, setContent] = useState<NosotrosContent>(DEFAULT_NOSOTROS_CONTENT);
+  const [content, setContent] = useState<NosotrosContent | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
       const response = await fetch("/api/public/nosotros", { cache: "no-store" });
+      if (!response.ok) throw new Error("No fue posible cargar Nosotros.");
       const payload = await response.json();
       setContent(resolveNosotrosContent(payload));
     };
 
-    void load();
+    void load().catch((error) =>
+      setLoadError(error instanceof Error ? error.message : "Error desconocido")
+    );
   }, []);
 
   const pillars = useMemo(
     () =>
-      content.pillars.items.map((item, index) => ({
+      (content?.pillars.items ?? []).map((item: NosotrosPillar, index: number) => ({
         ...item,
         Icon: pillarIcons[index % pillarIcons.length],
       })),
-    [content.pillars.items]
+    [content?.pillars.items]
   );
+
+  if (loadError) {
+    return <main className="p-10 text-center">{loadError}</main>;
+  }
+
+  if (!content) {
+    return <main className="p-10 text-center">Cargando Nosotros...</main>;
+  }
 
   return (
     <main className="space-y-10 bg-[#f7f4f2] pb-14 md:space-y-12">
@@ -64,7 +84,9 @@ export default function NosotrosPage() {
           </article>
 
           <article className="overflow-hidden rounded-[28px] border border-[#d6c29a]/60 bg-[#111a2b]">
-            <img src={content.hero.image} alt="Hero de Nosotros ANRO" className="h-full min-h-[320px] w-full object-cover" />
+            <div className="relative h-full min-h-[320px] w-full">
+              <Image src={content.hero.image} alt="Hero de Nosotros ANRO" fill className="object-cover" />
+            </div>
             <div className="border-t border-white/10 bg-[#0f1a2c] px-5 py-3 text-sm text-slate-200">
               Vista institucional de ANRO
             </div>
@@ -84,15 +106,13 @@ export default function NosotrosPage() {
               <p className="mt-4 text-[#5f5650] md:text-lg">{content.about.paragraph2}</p>
             </article>
 
-            <img
-              src={content.about.image}
-              alt="Equipo y operaciones ANRO"
-              className="h-full min-h-[320px] w-full rounded-[28px] border border-[#e7d9c4] object-cover"
-            />
+            <div className="relative h-full min-h-[320px] w-full overflow-hidden rounded-[28px] border border-[#e7d9c4]">
+              <Image src={content.about.image} alt="Equipo y operaciones ANRO" fill className="object-cover" />
+            </div>
           </div>
 
           <div className="mt-6 grid gap-4 md:grid-cols-2">
-            {content.about.cards.map((card) => (
+            {content.about.cards.map((card: NosotrosAboutCard) => (
               <article
                 key={card.id}
                 className="rounded-2xl border border-[#e7d9c4] bg-white p-5 shadow-[0_12px_30px_rgba(45,32,15,0.06)]"
@@ -149,7 +169,7 @@ export default function NosotrosPage() {
           <p className="mt-2 text-base text-white/80 md:text-lg">{content.values.description}</p>
 
           <div className="mt-6 grid gap-4 md:grid-cols-2">
-            {content.values.items.map((value) => (
+            {content.values.items.map((value: NosotrosValue) => (
               <article key={value.id} className="rounded-2xl border border-white/15 bg-white/5 p-5">
                 <p className="text-xs font-semibold tracking-[0.2em] text-[#e5c06a]">{value.number}</p>
                 <h3 className="mt-2 text-lg font-semibold">{value.title}</h3>
@@ -161,7 +181,7 @@ export default function NosotrosPage() {
           <div className="mt-7 rounded-2xl border border-white/15 bg-white/5 p-6">
             <h3 className="text-lg font-semibold">Fortalezas ANRO</h3>
             <ul className="mt-4 grid gap-3 md:grid-cols-2">
-              {content.values.strengths.map((strength) => (
+              {content.values.strengths.map((strength: NosotrosStrength) => (
                 <li key={strength.id} className="rounded-xl border border-white/15 bg-white/5 px-4 py-3">
                   <p className="flex items-center gap-2 text-sm font-semibold text-[#f0d38f]">
                     <CheckCircle2 className="h-4 w-4" />

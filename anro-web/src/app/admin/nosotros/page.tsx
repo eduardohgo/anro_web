@@ -118,9 +118,9 @@ export default function AdminNosotrosPage() {
       setContent(saved);
       setDraft(saved);
       setEditing(null);
-      setMessage("Cambios guardados correctamente en Neon.");
+      setMessage("Cambios guardados correctamente");
     } catch {
-      setMessage("Error al guardar. Revisa conexión y vuelve a intentar.");
+      setMessage("No fue posible guardar los cambios");
     } finally {
       setSaving(false);
     }
