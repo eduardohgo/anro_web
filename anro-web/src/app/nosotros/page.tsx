@@ -1,7 +1,6 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -12,12 +11,13 @@ import {
   Target,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import type { NosotrosContent, NosotrosPillar, NosotrosStrength, NosotrosValue, NosotrosAboutCard } from "@/lib/nosotros-content";
 import { resolveNosotrosContent } from "@/lib/nosotros-content";
 
 const pillarIcons = [Target, Hammer, HeartHandshake, ShieldCheck];
 
 export default function NosotrosPage() {
-  const [content, setContent] = useState<any | null>(null);
+  const [content, setContent] = useState<NosotrosContent | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -28,7 +28,9 @@ export default function NosotrosPage() {
       setContent(resolveNosotrosContent(payload));
     };
 
-    void load().catch((error) => setLoadError(error instanceof Error ? error.message : "Error desconocido"));
+    void load().catch((error) =>
+      setLoadError(error instanceof Error ? error.message : "Error desconocido")
+    );
   }, []);
 
   if (loadError) {
