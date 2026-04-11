@@ -33,6 +33,14 @@ export default function NosotrosPage() {
     );
   }, []);
 
+  if (loadError) {
+    return <main className="p-10 text-center">{loadError}</main>;
+  }
+
+  if (!content) {
+    return <main className="p-10 text-center">Cargando Nosotros...</main>;
+  }
+
   const pillars = useMemo(
     () =>
       (content?.pillars.items ?? []).map((item: NosotrosPillar, index: number) => ({
