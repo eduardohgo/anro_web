@@ -7,6 +7,21 @@ export interface StoredSession {
   admin: AdminUser;
 }
 
+function isValidSession(value: unknown): value is StoredSession {
+  if (!value || typeof value !== "object") return false;
+
+  const session = value as Partial<StoredSession>;
+
+  return (
+    typeof session.token === "string" &&
+    session.token.trim().length > 0 &&
+    !!session.admin &&
+    typeof session.admin === "object" &&
+    typeof session.admin.id === "string" &&
+    typeof session.admin.role === "string"
+  );
+}
+
 export const authStorage = {
   get(): StoredSession | null {
     if (typeof window === "undefined") return null;
@@ -15,7 +30,13 @@ export const authStorage = {
     if (!raw) return null;
 
     try {
-      return JSON.parse(raw) as StoredSession;
+      const parsed = JSON.parse(raw);
+      if (!isValidSession(parsed)) {
+        window.localStorage.removeItem(AUTH_STORAGE_KEY);
+        return null;
+      }
+
+      return parsed;
     } catch {
       window.localStorage.removeItem(AUTH_STORAGE_KEY);
       return null;

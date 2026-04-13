@@ -4,7 +4,19 @@ import { adminApi } from "@/lib/api";
 import { authStorage } from "@/lib/auth-storage";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+
+function isAdminRole(role: string) {
+  return role.trim().toUpperCase().includes("ADMIN");
+}
+
+function resolveNextPath(nextPath: string | null) {
+  if (!nextPath) return "/admin";
+  if (!nextPath.startsWith("/")) return "/admin";
+  if (nextPath.startsWith("//")) return "/admin";
+  if (nextPath.startsWith("/login")) return "/admin";
+  return nextPath;
+}
 
 export default function LoginForm() {
   const router = useRouter();
@@ -15,8 +27,18 @@ export default function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const nextPath = useMemo(() => searchParams.get("next") || "/admin", [searchParams]);
+  const nextPath = useMemo(
+    () => resolveNextPath(searchParams.get("next")),
+    [searchParams]
+  );
   const expired = searchParams.get("expired") === "1";
+
+  useEffect(() => {
+    const session = authStorage.get();
+    if (session?.token && isAdminRole(session.admin.role)) {
+      router.replace(nextPath);
+    }
+  }, [nextPath, router]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -25,6 +47,9 @@ export default function LoginForm() {
 
     try {
       const response = await adminApi.login(email, password);
+      if (!isAdminRole(response.admin.role)) {
+        throw new Error("Tu usuario no tiene permisos para acceder al panel administrativo.");
+      }
       authStorage.set(response);
       router.replace(nextPath);
     } catch (err) {
