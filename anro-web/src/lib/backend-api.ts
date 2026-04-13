@@ -1,13 +1,17 @@
 import { NextResponse } from "next/server";
 
-function resolveBackendApiUrl() {
+function removeTrailingSlash(value: string) {
+  return value.replace(/\/$/, "");
+}
+
+function resolveConfiguredBackendApiUrl() {
   const explicitServerUrl =
     process.env.BACKEND_API_URL ||
     process.env.INTERNAL_API_URL ||
     process.env.API_URL;
 
   if (explicitServerUrl) {
-    return explicitServerUrl.replace(/\/$/, "");
+    return removeTrailingSlash(explicitServerUrl);
   }
 
   const publicUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
@@ -15,10 +19,38 @@ function resolveBackendApiUrl() {
     return publicUrl;
   }
 
-  return "http://localhost:5000/api";
+  return `http://localhost:${process.env.BACKEND_PORT || "5000"}/api`;
 }
 
-export const BACKEND_API_URL = resolveBackendApiUrl();
+function resolveBackendApiUrl(requestUrl: string) {
+  const configured = resolveConfiguredBackendApiUrl();
+
+  try {
+    const request = new URL(requestUrl);
+    const target = new URL(configured);
+
+    const isSameOrigin = request.origin === target.origin;
+    const targetsNextApi = target.pathname === "/api" || target.pathname.startsWith("/api/");
+
+    if (isSameOrigin && targetsNextApi) {
+      const internalOverride = process.env.BACKEND_INTERNAL_API_URL;
+      if (internalOverride) {
+        return removeTrailingSlash(internalOverride);
+      }
+
+      const fallback = new URL(requestUrl);
+      fallback.port = process.env.BACKEND_PORT || "5000";
+      fallback.pathname = "/api";
+      fallback.search = "";
+      fallback.hash = "";
+      return removeTrailingSlash(fallback.toString());
+    }
+  } catch {
+    return configured;
+  }
+
+  return configured;
+}
 
 type ProxyOptions = {
   method?: string;
@@ -29,6 +61,7 @@ export async function proxyToBackend(
   path: string,
   options: ProxyOptions = {}
 ) {
+  const backendApiUrl = resolveBackendApiUrl(request.url);
   const headers = new Headers();
   const contentType = request.headers.get("content-type");
   const authorization = request.headers.get("authorization");
@@ -38,11 +71,13 @@ export async function proxyToBackend(
 
   const method = options.method || request.method;
   const canHaveBody = method !== "GET" && method !== "HEAD";
+  const rawBody = canHaveBody ? await request.arrayBuffer() : null;
+  const body = rawBody && rawBody.byteLength > 0 ? rawBody : undefined;
 
-  const response = await fetch(`${BACKEND_API_URL}${path}`, {
+  const response = await fetch(`${backendApiUrl}${path}`, {
     method,
     headers,
-    body: canHaveBody ? request.body : undefined,
+    body,
     cache: "no-store",
   });
 
