@@ -10,6 +10,10 @@ interface AdminRouteProps {
   children: (session: { token: string; admin: AdminUser }) => React.ReactNode;
 }
 
+function isAdminRole(role: string) {
+  return role.trim().toUpperCase().includes("ADMIN");
+}
+
 export default function AdminRoute({ children }: AdminRouteProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -24,12 +28,25 @@ export default function AdminRoute({ children }: AdminRouteProps) {
       return;
     }
 
+    if (!isAdminRole(currentSession.admin.role)) {
+      authStorage.clear();
+      router.replace("/login?expired=1");
+      return;
+    }
+
     let isMounted = true;
 
     adminApi
       .me()
       .then((admin) => {
         if (!isMounted) return;
+
+        if (!admin || !isAdminRole(admin.role || "")) {
+          authStorage.clear();
+          router.replace("/login?expired=1");
+          return;
+        }
+
         const nextSession = { token: currentSession.token, admin };
         authStorage.set(nextSession);
         setSession(nextSession);
@@ -39,7 +56,7 @@ export default function AdminRoute({ children }: AdminRouteProps) {
         if (!isMounted) return;
         if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
           authStorage.clear();
-          router.replace("/login?expired=1");
+          router.replace(`/login?expired=1&next=${encodeURIComponent(pathname)}`);
           return;
         }
 

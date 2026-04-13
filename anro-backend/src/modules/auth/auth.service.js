@@ -2,6 +2,11 @@ const prisma = require("../../config/prisma");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
+const hasAdminRole = (role) => {
+  if (typeof role !== "string") return false;
+  return role.trim().toUpperCase().includes("ADMIN");
+};
+
 const loginAdmin = async ({ email, password }) => {
   const admin = await prisma.adminUser.findUnique({
     where: { email },
@@ -13,6 +18,10 @@ const loginAdmin = async ({ email, password }) => {
 
   if (!admin.isActive) {
     throw new Error("Usuario inactivo");
+  }
+
+  if (!hasAdminRole(admin.role)) {
+    throw new Error("Permisos insuficientes");
   }
 
   const isMatch = await bcrypt.compare(password, admin.password);
@@ -43,7 +52,7 @@ const loginAdmin = async ({ email, password }) => {
 };
 
 const getAdminById = async (id) => {
-  return prisma.adminUser.findUnique({
+  const admin = await prisma.adminUser.findUnique({
     where: { id },
     select: {
       id: true,
@@ -54,6 +63,12 @@ const getAdminById = async (id) => {
       createdAt: true,
     },
   });
+
+  if (!admin || !admin.isActive || !hasAdminRole(admin.role)) {
+    return null;
+  }
+
+  return admin;
 };
 
 module.exports = {
