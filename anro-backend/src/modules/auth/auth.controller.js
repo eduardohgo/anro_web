@@ -17,6 +17,9 @@ const login = async (req, res) => {
 const me = async (req, res) => {
   try {
     const admin = await authService.getAdminById(req.user.id);
+    if (!admin) {
+      return res.status(401).json({ message: "Usuario no autorizado" });
+    }
 
     return res.status(200).json(admin);
   } catch (error) {

@@ -38,6 +38,8 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     const session = authStorage.get();
     if (session?.token) {
       headers.set("Authorization", `Bearer ${session.token}`);
+    } else {
+      throw new ApiError("Tu sesión no es válida. Inicia sesión nuevamente.", 401);
     }
   }
 
