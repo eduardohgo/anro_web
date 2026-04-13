@@ -526,7 +526,7 @@ export default function PodcastPage() {
   }, []);
 
   const publishedEpisodes = useMemo(() => {
-    return episodes.filter((episode) => episode.status === "PUBLISHED");
+    return episodes.filter((episode) => !episode.status || episode.status === "PUBLISHED");
   }, [episodes]);
 
   const featuredEpisodes = useMemo(() => {
