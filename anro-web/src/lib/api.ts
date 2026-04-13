@@ -79,8 +79,14 @@ export const adminApi = {
 };
 
 export const podcastPublicApi = {
-  list() {
-    return request<PodcastEpisode[]>("/podcast/episodes");
+  async list() {
+    const response = await request<PodcastEpisode[] | { episodes?: PodcastEpisode[]; data?: PodcastEpisode[] }>("/podcast/episodes");
+
+    if (Array.isArray(response)) return response;
+    if (Array.isArray(response.episodes)) return response.episodes;
+    if (Array.isArray(response.data)) return response.data;
+
+    return [];
   },
 };
 
