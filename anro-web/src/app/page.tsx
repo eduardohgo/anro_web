@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import HeroCarousel from "@/components/Home/HeroCarousel";
 import {
   DEFAULT_HOME_CONTENT,
+  enforceHomeFixedText,
   resolveHomeContent,
 } from "@/lib/home-content";
 
@@ -28,7 +29,7 @@ export default function HomePage() {
 
         const payload = (await response.json()) as unknown;
         if (!mounted) return;
-        setHomeContent(resolveHomeContent(payload));
+        setHomeContent(enforceHomeFixedText(resolveHomeContent(payload)));
       } catch (error) {
         console.error("No fue posible cargar Home desde Neon.", error);
       }
