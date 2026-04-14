@@ -625,6 +625,74 @@ export function resolveHomeContent(raw: unknown): HomeContentConfig {
   };
 }
 
+export function enforceHomeFixedText(content: HomeContentConfig): HomeContentConfig {
+  const fixed = structuredClone(DEFAULT_HOME_CONTENT);
+
+  const heroSlides = content.heroSlides.map((slide, index) => ({
+    id: text(slide.id, `hero-${index + 1}`),
+    src: text(
+      slide.src,
+      DEFAULT_HOME_CONTENT.heroSlides[index]?.src ||
+        DEFAULT_HOME_CONTENT.heroSlides[0].src
+    ),
+    alt: text(
+      DEFAULT_HOME_CONTENT.heroSlides[index]?.alt,
+      DEFAULT_HOME_CONTENT.heroSlides[0].alt
+    ),
+  }));
+  fixed.heroSlides = heroSlides.length > 0 ? heroSlides : fixed.heroSlides;
+
+  fixed.developmentSection.backgroundImage = text(
+    content.developmentSection.backgroundImage,
+    DEFAULT_HOME_CONTENT.developmentSection.backgroundImage
+  );
+  const developmentCards = content.developmentSection.cards.map((card, index) => ({
+    ...fixed.developmentSection.cards[index],
+    id: text(card.id, fixed.developmentSection.cards[index]?.id || `dev-${index + 1}`),
+    image: text(
+      card.image,
+      fixed.developmentSection.cards[index]?.image ||
+        DEFAULT_HOME_CONTENT.developmentSection.cards[0].image
+    ),
+    active: bool(card.active, true),
+    order: index + 1,
+  }));
+  fixed.developmentSection.cards =
+    developmentCards.length > 0 ? developmentCards : fixed.developmentSection.cards;
+
+  const serviceCards = content.servicesSection.cards.map((card, index) => ({
+    ...fixed.servicesSection.cards[index],
+    id: text(card.id, fixed.servicesSection.cards[index]?.id || `service-${index + 1}`),
+    image: text(
+      card.image,
+      fixed.servicesSection.cards[index]?.image ||
+        DEFAULT_HOME_CONTENT.servicesSection.cards[0].image
+    ),
+    active: bool(card.active, true),
+    order: index + 1,
+  }));
+  fixed.servicesSection.cards = serviceCards.length > 0 ? serviceCards : fixed.servicesSection.cards;
+
+  fixed.commitmentSection.mainImage.image = text(
+    content.commitmentSection.mainImage.image,
+    DEFAULT_HOME_CONTENT.commitmentSection.mainImage.image
+  );
+  const sideImages = content.commitmentSection.sideImages.map((image, index) => ({
+    ...fixed.commitmentSection.sideImages[index],
+    image: text(
+      image.image,
+      fixed.commitmentSection.sideImages[index]?.image ||
+        DEFAULT_HOME_CONTENT.commitmentSection.sideImages[0].image
+    ),
+  }));
+  fixed.commitmentSection.sideImages =
+    sideImages.length > 0 ? sideImages : fixed.commitmentSection.sideImages;
+
+  fixed.updatedAt = text(content.updatedAt, DEFAULT_HOME_CONTENT.updatedAt);
+
+  return fixed;
+}
+
 export function parseStoredHomeContent(value: string | null): HomeContentConfig {
   if (!value) return structuredClone(DEFAULT_HOME_CONTENT);
 

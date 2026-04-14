@@ -1,11 +1,17 @@
 import { NextResponse } from "next/server";
-import { DEFAULT_HOME_CONTENT, resolveHomeContent } from "@/lib/home-content";
+import {
+  DEFAULT_HOME_CONTENT,
+  enforceHomeFixedText,
+  resolveHomeContent,
+} from "@/lib/home-content";
 import { getPageContent } from "@/lib/page-content";
 
 export async function GET() {
   try {
     const content = await getPageContent<unknown>("home");
-    return NextResponse.json(resolveHomeContent(content ?? DEFAULT_HOME_CONTENT));
+    return NextResponse.json(
+      enforceHomeFixedText(resolveHomeContent(content ?? DEFAULT_HOME_CONTENT))
+    );
   } catch (error) {
     return NextResponse.json(
       {

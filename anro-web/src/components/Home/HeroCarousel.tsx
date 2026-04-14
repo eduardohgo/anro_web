@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { MapPinIcon } from "@heroicons/react/24/outline";
 import {
   DEFAULT_HOME_CONTENT,
+  enforceHomeFixedText,
   HomeHeroSection,
   HomeHeroSlide,
   resolveHomeContent,
@@ -27,7 +28,7 @@ export default function HeroCarousel() {
         }
 
         const payload = (await response.json()) as unknown;
-        const config = resolveHomeContent(payload);
+        const config = enforceHomeFixedText(resolveHomeContent(payload));
 
         if (!mounted) return;
         setSlides(config.heroSlides);

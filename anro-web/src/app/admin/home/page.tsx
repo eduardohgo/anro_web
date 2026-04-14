@@ -26,6 +26,7 @@ import type {
 import { useEffect, useMemo, useState } from "react"; 
 import {
   DEFAULT_HOME_CONTENT,
+  enforceHomeFixedText,
   resolveHomeContent,
   type HomeContentConfig,
 } from "@/lib/home-content";
@@ -205,7 +206,7 @@ function createModulesFromHomeContent(home: HomeContentConfig): HomeModule[] {
       name: "Hero principal",
       publicReference: "Sección pública: Hero superior",
       description:
-        "Edita encabezado principal, botones, beneficios, datos rápidos e imágenes del hero.",
+        "Administra únicamente las imágenes del carrusel principal.",
       status: "ACTIVE",
       icon: Rocket,
       content: {
@@ -243,7 +244,7 @@ function createModulesFromHomeContent(home: HomeContentConfig): HomeModule[] {
       name: "Desarrollo principal",
       publicReference: "Sección pública: Nuestro Desarrollo Principal",
       description:
-        "Edita encabezado, lista lateral, botón, fondo e imágenes de las tarjetas del desarrollo.",
+        "Administra fondo e imágenes de las tarjetas del bloque de desarrollo.",
       status: "ACTIVE",
       icon: Wrench,
       content: {
@@ -271,7 +272,7 @@ function createModulesFromHomeContent(home: HomeContentConfig): HomeModule[] {
       name: "Servicios",
       publicReference: "Sección pública: Servicios",
       description:
-        "Edita badge, título, descripción, CTA y las tarjetas visuales de servicios.",
+        "Administra únicamente las imágenes de las tarjetas de servicios.",
       status: "ACTIVE",
       icon: Sparkles,
       content: {
@@ -294,7 +295,7 @@ function createModulesFromHomeContent(home: HomeContentConfig): HomeModule[] {
       name: "Compromiso y resultados",
       publicReference: "Sección pública: Compromiso y resultados",
       description:
-        "Edita textos, botones, bloques de apoyo e imágenes principales y secundarias.",
+        "Administra únicamente la imagen principal y las imágenes secundarias.",
       status: "ACTIVE",
       icon: Flame,
       content: {
@@ -349,7 +350,6 @@ function buildHomeContentFromModules(currentModules: HomeModule[]): HomeContentC
   const desarrollo = currentModules.find((module) => module.key === "desarrollo");
   const servicios = currentModules.find((module) => module.key === "servicios");
   const compromiso = currentModules.find((module) => module.key === "compromiso");
-  const cta = currentModules.find((module) => module.key === "cta");
 
   const base = structuredClone(DEFAULT_HOME_CONTENT);
 
@@ -359,111 +359,37 @@ function buildHomeContentFromModules(currentModules: HomeModule[]): HomeContentC
       .map((slide) => ({
         id: slide.id,
         src: slide.image,
-        alt: slide.title,
+        alt: slide.title || "Slide Home",
       }));
-
-    base.heroSection = {
-      badge: hero.content.badge,
-      titleLineOne: hero.content.titleWhite,
-      titleHighlight: hero.content.titleGold,
-      description: hero.content.description,
-      primaryButtonText: hero.content.primaryButtonText,
-      primaryButtonLink: hero.content.primaryButtonLink,
-      secondaryButtonText: hero.content.secondaryButtonText,
-      secondaryButtonLink: hero.content.secondaryButtonLink,
-      locationLinkText: hero.content.quickFactsLinkText,
-      locationLink: hero.content.quickFactsLink,
-      featureItems: hero.content.benefits.map((item) => ({
-        id: item.id,
-        text: item.text,
-      })),
-      quickFacts: hero.content.quickFacts.map((fact) => ({
-        id: fact.id,
-        label: fact.label,
-        value: fact.value,
-      })),
-    };
   }
 
   if (desarrollo && isDesarrolloContent(desarrollo.content)) {
-    base.developmentSection = {
-      badge: desarrollo.content.badge,
-      title: desarrollo.content.title,
-      subtitle: desarrollo.content.subtitle,
-      backgroundImage: desarrollo.content.backgroundImage,
-      sideList: desarrollo.content.points.map((point) => point.text),
-      buttonText: desarrollo.content.buttonText,
-      buttonLink: desarrollo.content.buttonLink,
-      cards: desarrollo.content.cards.map((card, index) => ({
-        id: card.id,
-        title: card.title,
-        tag: card.subtitle,
-        image: card.image,
-        order: index + 1,
-        active: card.active,
-      })),
-    };
+    base.developmentSection.backgroundImage = desarrollo.content.backgroundImage;
+    base.developmentSection.cards = desarrollo.content.cards.map((card, index) => ({
+      ...base.developmentSection.cards[index],
+      id: card.id,
+      image: card.image,
+      order: index + 1,
+      active: card.active,
+    }));
   }
 
   if (servicios && isServicesContent(servicios.content)) {
-    base.servicesSection = {
-      badge: servicios.content.badge,
-      title: servicios.content.title,
-      description: servicios.content.description,
-      buttonText: servicios.content.buttonText,
-      buttonLink: servicios.content.buttonLink,
-      cards: servicios.content.cards.map((card, index) => ({
-        id: card.id,
-        title: card.title,
-        description: card.description,
-        image: card.image,
-        order: index + 1,
-        active: card.visible,
-      })),
-    };
+    base.servicesSection.cards = servicios.content.cards.map((card, index) => ({
+      ...base.servicesSection.cards[index],
+      id: card.id,
+      image: card.image,
+      order: index + 1,
+      active: card.visible,
+    }));
   }
 
   if (compromiso && isCompromisoContent(compromiso.content)) {
-    base.commitmentSection = {
-      badge: compromiso.content.badge,
-      title: compromiso.content.title,
-      description: compromiso.content.description,
-      primaryButtonText: compromiso.content.primaryButtonText,
-      primaryButtonLink: compromiso.content.primaryButtonLink,
-      secondaryButtonText: compromiso.content.secondaryButtonText,
-      secondaryButtonLink: compromiso.content.secondaryButtonLink,
-      featureBlocks: compromiso.content.featureBlocks
-        .filter((block) => block.visible)
-        .map((block) => ({
-          title: block.title,
-          description: block.text,
-        })),
-      mainImage: {
-        image: compromiso.content.mainImage.image,
-        alt: compromiso.content.mainImage.title,
-        title: compromiso.content.mainImage.title,
-        subtitle: compromiso.content.mainImage.subtitle,
-      },
-      sideImages: compromiso.content.sideImages
-        .filter((image) => image.visible)
-        .map((image) => ({
-          image: image.image,
-          alt: image.title,
-          title: image.title,
-          subtitle: image.subtitle,
-        })),
-    };
-  }
-
-  if (cta && isCtaContent(cta.content)) {
-    base.ctaSection = {
-      title: cta.content.title,
-      primaryButtonText: cta.content.buttonText,
-      primaryButtonLink: cta.content.link,
-      secondaryButtonText: "Llamar",
-      secondaryButtonLink: "/contacto",
-      footerText: cta.content.description,
-    };
+    base.commitmentSection.mainImage.image = compromiso.content.mainImage.image;
+    base.commitmentSection.sideImages = compromiso.content.sideImages.map((image, index) => ({
+      ...base.commitmentSection.sideImages[index],
+      image: image.image,
+    }));
   }
 
   base.updatedAt = new Date().toISOString();
@@ -485,7 +411,7 @@ async function persistHomeContent(currentModules: HomeModule[]) {
   }
 
   const payload = (await response.json()) as unknown;
-  return resolveHomeContent(payload);
+  return enforceHomeFixedText(resolveHomeContent(payload));
 }
 
 function Field({
@@ -973,320 +899,44 @@ function renderModuleEditor(
   setDraftContent: Dispatch<SetStateAction<ModuleContent | null>>
 ) {
   if (moduleKey === "hero" && isHeroContent(content)) {
-    const activeSlide =
-      content.slides.find((slide) => slide.id === content.activeSlideId) ?? content.slides[0];
-
     return (
       <div className="space-y-5">
-        <SectionShell title="Encabezado principal">
-          <Field
-            label="Badge"
-            value={content.badge}
-            onChange={(value) =>
-              setDraftContent((current) =>
-                current && isHeroContent(current) ? { ...current, badge: value } : current
-              )
-            }
-          />
-          <Field
-            label="Título blanco"
-            value={content.titleWhite}
-            onChange={(value) =>
-              setDraftContent((current) =>
-                current && isHeroContent(current) ? { ...current, titleWhite: value } : current
-              )
-            }
-          />
-          <Field
-            label="Título dorado"
-            value={content.titleGold}
-            onChange={(value) =>
-              setDraftContent((current) =>
-                current && isHeroContent(current) ? { ...current, titleGold: value } : current
-              )
-            }
-          />
-          <TextAreaField
-            label="Descripción"
-            value={content.description}
-            onChange={(value) =>
-              setDraftContent((current) =>
-                current && isHeroContent(current) ? { ...current, description: value } : current
-              )
-            }
-          />
-        </SectionShell>
-
-        <SectionShell title="Botones">
-          <div className="grid gap-4 md:grid-cols-2">
-            <Field
-              label="Texto botón principal"
-              value={content.primaryButtonText}
-              onChange={(value) =>
-                setDraftContent((current) =>
-                  current && isHeroContent(current)
-                    ? { ...current, primaryButtonText: value }
-                    : current
-                )
-              }
-            />
-            <Field
-              label="Enlace botón principal"
-              value={content.primaryButtonLink}
-              onChange={(value) =>
-                setDraftContent((current) =>
-                  current && isHeroContent(current)
-                    ? { ...current, primaryButtonLink: value }
-                    : current
-                )
-              }
-            />
-            <Field
-              label="Texto botón secundario"
-              value={content.secondaryButtonText}
-              onChange={(value) =>
-                setDraftContent((current) =>
-                  current && isHeroContent(current)
-                    ? { ...current, secondaryButtonText: value }
-                    : current
-                )
-              }
-            />
-            <Field
-              label="Enlace botón secundario"
-              value={content.secondaryButtonLink}
-              onChange={(value) =>
-                setDraftContent((current) =>
-                  current && isHeroContent(current)
-                    ? { ...current, secondaryButtonLink: value }
-                    : current
-                )
-              }
-            />
-          </div>
-        </SectionShell>
-
-        <SectionShell title="Beneficios del lado izquierdo">
-          <div className="space-y-3">
-            {content.benefits.map((benefit, index) => (
-              <div key={benefit.id} className="flex items-center gap-3">
-                <div className="flex-1">
-                  <Field
-                    label={`Beneficio ${index + 1}`}
-                    value={benefit.text}
-                    onChange={(value) =>
-                      setDraftContent((current) => {
-                        if (!current || !isHeroContent(current)) return current;
-                        const next = [...current.benefits];
-                        next[index] = { ...next[index], text: value };
-                        return { ...current, benefits: next };
-                      })
-                    }
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setDraftContent((current) => {
-                      if (!current || !isHeroContent(current)) return current;
-                      return {
-                        ...current,
-                        benefits: current.benefits.filter((item) => item.id !== benefit.id),
-                      };
-                    })
-                  }
-                  className="mt-6 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[#eadfcd] text-slate-500 hover:bg-[#faf7f1]"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-            ))}
-            <button
-              type="button"
-              onClick={() =>
-                setDraftContent((current) => {
-                  if (!current || !isHeroContent(current)) return current;
-                  return {
-                    ...current,
-                    benefits: [
-                      ...current.benefits,
-                      { id: `benefit-${Date.now()}`, text: "Nuevo beneficio" },
-                    ],
-                  };
-                })
-              }
-              className="inline-flex items-center gap-2 rounded-xl border border-[#ddd1bc] bg-white px-3 py-2 text-sm font-semibold text-[#3a465a]"
-            >
-              <Plus className="h-4 w-4" />
-              Agregar beneficio
-            </button>
-          </div>
-        </SectionShell>
-
-        <SectionShell title="Panel de datos rápidos">
-          <Field
-            label="Título del panel"
-            value={content.quickFactsTitle}
-            onChange={(value) =>
-              setDraftContent((current) =>
-                current && isHeroContent(current)
-                  ? { ...current, quickFactsTitle: value }
-                  : current
-              )
-            }
-          />
-          <div className="grid gap-3">
-            {content.quickFacts.map((fact, index) => (
-              <div key={fact.id} className="grid gap-3 md:grid-cols-[0.9fr_1.1fr_auto]">
-                <Field
-                  label={`Etiqueta ${index + 1}`}
-                  value={fact.label}
-                  onChange={(value) =>
-                    setDraftContent((current) => {
-                      if (!current || !isHeroContent(current)) return current;
-                      const next = [...current.quickFacts];
-                      next[index] = { ...next[index], label: value };
-                      return { ...current, quickFacts: next };
-                    })
-                  }
-                />
-                <Field
-                  label={`Valor ${index + 1}`}
-                  value={fact.value}
-                  onChange={(value) =>
-                    setDraftContent((current) => {
-                      if (!current || !isHeroContent(current)) return current;
-                      const next = [...current.quickFacts];
-                      next[index] = { ...next[index], value };
-                      return { ...current, quickFacts: next };
-                    })
-                  }
-                />
-                <button
-                  type="button"
-                  onClick={() =>
-                    setDraftContent((current) => {
-                      if (!current || !isHeroContent(current)) return current;
-                      return {
-                        ...current,
-                        quickFacts: current.quickFacts.filter((item) => item.id !== fact.id),
-                      };
-                    })
-                  }
-                  className="mt-6 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[#eadfcd] text-slate-500 hover:bg-[#faf7f1]"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-            ))}
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={() =>
-                setDraftContent((current) => {
-                  if (!current || !isHeroContent(current)) return current;
-                  return {
-                    ...current,
-                    quickFacts: [
-                      ...current.quickFacts,
-                      {
-                        id: `fact-${Date.now()}`,
-                        label: "Nueva etiqueta",
-                        value: "Nuevo valor",
-                      },
-                    ],
-                  };
-                })
-              }
-              className="inline-flex items-center gap-2 rounded-xl border border-[#ddd1bc] bg-white px-3 py-2 text-sm font-semibold text-[#3a465a]"
-            >
-              <Plus className="h-4 w-4" />
-              Agregar dato rápido
-            </button>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <Field
-              label="Texto enlace del panel"
-              value={content.quickFactsLinkText}
-              onChange={(value) =>
-                setDraftContent((current) =>
-                  current && isHeroContent(current)
-                    ? { ...current, quickFactsLinkText: value }
-                    : current
-                )
-              }
-            />
-            <Field
-              label="Enlace del panel"
-              value={content.quickFactsLink}
-              onChange={(value) =>
-                setDraftContent((current) =>
-                  current && isHeroContent(current)
-                    ? { ...current, quickFactsLink: value }
-                    : current
-                )
-              }
-            />
-          </div>
-        </SectionShell>
-
         <SectionShell title="Imágenes del hero / slides">
           <div className="space-y-4">
             {content.slides.map((slide, index) => (
               <div key={slide.id} className="rounded-2xl border border-[#e7dcc9] bg-[#fffdfa] p-4">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <Field
-                    label={`Título slide ${index + 1}`}
-                    value={slide.title}
+                <div className="flex items-end justify-between gap-3">
+                  <ToggleField
+                    label="Slide activo"
+                    checked={slide.active}
                     onChange={(value) =>
                       setDraftContent((current) => {
                         if (!current || !isHeroContent(current)) return current;
                         const next = [...current.slides];
-                        next[index] = { ...next[index], title: value };
+                        next[index] = { ...next[index], active: value };
                         return { ...current, slides: next };
                       })
                     }
                   />
-                  <div className="flex items-end gap-3">
-                    <ToggleField
-                      label="Slide activo"
-                      checked={slide.active}
-                      onChange={(value) =>
-                        setDraftContent((current) => {
-                          if (!current || !isHeroContent(current)) return current;
-                          const next = [...current.slides];
-                          next[index] = { ...next[index], active: value };
-                          const nextActiveId = value ? slide.id : current.activeSlideId;
-                          return { ...current, slides: next, activeSlideId: nextActiveId };
-                        })
-                      }
-                    />
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setDraftContent((current) => {
-                          if (!current || !isHeroContent(current)) return current;
-                          const filtered = current.slides.filter((item) => item.id !== slide.id);
-                          return {
-                            ...current,
-                            slides: filtered,
-                            activeSlideId:
-                              current.activeSlideId === slide.id && filtered[0]
-                                ? filtered[0].id
-                                : current.activeSlideId,
-                          };
-                        })
-                      }
-                      className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[#eadfcd] text-slate-500 hover:bg-[#faf7f1]"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setDraftContent((current) => {
+                        if (!current || !isHeroContent(current)) return current;
+                        return {
+                          ...current,
+                          slides: current.slides.filter((item) => item.id !== slide.id),
+                        };
+                      })
+                    }
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[#eadfcd] text-slate-500 hover:bg-[#faf7f1]"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                 </div>
-                <div className="mt-4 grid gap-4 md:grid-cols-[1fr_auto]">
+                <div className="mt-4">
                   <ImageUploader
-                    label="Imagen del slide"
+                    label={`Imagen del slide ${index + 1}`}
                     image={slide.image}
                     onChange={(value) =>
                       setDraftContent((current) => {
@@ -1298,25 +948,6 @@ function renderModuleEditor(
                     }
                     heightClass="h-36"
                   />
-                  <div className="space-y-2">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setDraftContent((current) =>
-                          current && isHeroContent(current)
-                            ? { ...current, activeSlideId: slide.id }
-                            : current
-                        )
-                      }
-                      className={`rounded-xl px-3 py-2 text-sm font-semibold ${
-                        activeSlide?.id === slide.id
-                          ? "bg-[#d4a62a] text-[#111d31]"
-                          : "border border-[#ddd1bc] bg-white text-[#3a465a]"
-                      }`}
-                    >
-                      Usar en preview
-                    </button>
-                  </div>
                 </div>
               </div>
             ))}
@@ -1327,7 +958,7 @@ function renderModuleEditor(
                   if (!current || !isHeroContent(current)) return current;
                   const newSlide: HeroSlide = {
                     id: `hero-slide-${Date.now()}`,
-                    title: "Nuevo slide",
+                    title: `Slide ${current.slides.length + 1}`,
                     image: "",
                     active: true,
                   };
@@ -1352,38 +983,6 @@ function renderModuleEditor(
   if (moduleKey === "desarrollo" && isDesarrolloContent(content)) {
     return (
       <div className="space-y-5">
-        <SectionShell title="Encabezado de la sección">
-          <Field
-            label="Badge"
-            value={content.badge}
-            onChange={(value) =>
-              setDraftContent((current) =>
-                current && isDesarrolloContent(current) ? { ...current, badge: value } : current
-              )
-            }
-          />
-          <Field
-            label="Título"
-            value={content.title}
-            onChange={(value) =>
-              setDraftContent((current) =>
-                current && isDesarrolloContent(current) ? { ...current, title: value } : current
-              )
-            }
-          />
-          <TextAreaField
-            label="Subtítulo"
-            value={content.subtitle}
-            onChange={(value) =>
-              setDraftContent((current) =>
-                current && isDesarrolloContent(current)
-                  ? { ...current, subtitle: value }
-                  : current
-              )
-            }
-          />
-        </SectionShell>
-
         <SectionShell title="Imagen de fondo de la sección">
           <ImageUploader
             label="Fondo de Desarrollo principal"
@@ -1398,132 +997,22 @@ function renderModuleEditor(
           />
         </SectionShell>
 
-        <SectionShell title="Lista lateral">
-          {content.points.map((point, index) => (
-            <div key={point.id} className="flex items-center gap-3">
-              <div className="flex-1">
-                <Field
-                  label={`Punto ${index + 1}`}
-                  value={point.text}
-                  onChange={(value) =>
-                    setDraftContent((current) => {
-                      if (!current || !isDesarrolloContent(current)) return current;
-                      const nextPoints = [...current.points];
-                      nextPoints[index] = { ...nextPoints[index], text: value };
-                      return { ...current, points: nextPoints };
-                    })
-                  }
-                />
-              </div>
-              <button
-                type="button"
-                onClick={() =>
-                  setDraftContent((current) => {
-                    if (!current || !isDesarrolloContent(current)) return current;
-                    return {
-                      ...current,
-                      points: current.points.filter((item) => item.id !== point.id),
-                    };
-                  })
-                }
-                className="mt-6 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[#eadfcd] text-slate-500 hover:bg-[#faf7f1]"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </div>
-          ))}
-          <button
-            type="button"
-            onClick={() =>
-              setDraftContent((current) => {
-                if (!current || !isDesarrolloContent(current)) return current;
-                return {
-                  ...current,
-                  points: [
-                    ...current.points,
-                    { id: `point-${Date.now()}`, text: "Nuevo punto" },
-                  ],
-                };
-              })
-            }
-            className="inline-flex items-center gap-2 rounded-xl border border-[#ddd1bc] bg-white px-3 py-2 text-sm font-semibold text-[#3a465a]"
-          >
-            <Plus className="h-4 w-4" />
-            Agregar punto
-          </button>
-        </SectionShell>
-
-        <SectionShell title="Botón de sección">
-          <div className="grid gap-4 md:grid-cols-2">
-            <Field
-              label="Texto del botón"
-              value={content.buttonText}
-              onChange={(value) =>
-                setDraftContent((current) =>
-                  current && isDesarrolloContent(current)
-                    ? { ...current, buttonText: value }
-                    : current
-                )
-              }
-            />
-            <Field
-              label="Enlace del botón"
-              value={content.buttonLink}
-              onChange={(value) =>
-                setDraftContent((current) =>
-                  current && isDesarrolloContent(current)
-                    ? { ...current, buttonLink: value }
-                    : current
-                )
-              }
-            />
-          </div>
-        </SectionShell>
-
         <SectionShell title="Tarjetas visuales">
           {content.cards.map((card, index) => (
             <div key={card.id} className="rounded-2xl border border-[#e7dcc9] bg-[#fffdfa] p-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <Field
-                  label="Título de tarjeta"
-                  value={card.title}
-                  onChange={(value) =>
-                    setDraftContent((current) => {
-                      if (!current || !isDesarrolloContent(current)) return current;
-                      const nextCards = [...current.cards];
-                      nextCards[index] = { ...nextCards[index], title: value };
-                      return { ...current, cards: nextCards };
-                    })
-                  }
-                />
-                <Field
-                  label="Subtítulo / etiqueta"
-                  value={card.subtitle}
-                  onChange={(value) =>
-                    setDraftContent((current) => {
-                      if (!current || !isDesarrolloContent(current)) return current;
-                      const nextCards = [...current.cards];
-                      nextCards[index] = { ...nextCards[index], subtitle: value };
-                      return { ...current, cards: nextCards };
-                    })
-                  }
-                />
-              </div>
-              <div className="mt-4">
-                <ImageUploader
-                  label="Imagen de la tarjeta"
-                  image={card.image}
-                  onChange={(value) =>
-                    setDraftContent((current) => {
-                      if (!current || !isDesarrolloContent(current)) return current;
-                      const nextCards = [...current.cards];
-                      nextCards[index] = { ...nextCards[index], image: value };
-                      return { ...current, cards: nextCards };
-                    })
-                  }
-                  heightClass="h-36"
-                />
-              </div>
+              <ImageUploader
+                label={`Imagen de la tarjeta ${index + 1}`}
+                image={card.image}
+                onChange={(value) =>
+                  setDraftContent((current) => {
+                    if (!current || !isDesarrolloContent(current)) return current;
+                    const nextCards = [...current.cards];
+                    nextCards[index] = { ...nextCards[index], image: value };
+                    return { ...current, cards: nextCards };
+                  })
+                }
+                heightClass="h-36"
+              />
               <div className="mt-4 flex items-center justify-between gap-3">
                 <ToggleField
                   label="Tarjeta activa"
@@ -1566,8 +1055,8 @@ function renderModuleEditor(
                     ...current.cards,
                     {
                       id: `dev-card-${Date.now()}`,
-                      title: "Nueva tarjeta",
-                      subtitle: "Nueva etiqueta",
+                      title: `Tarjeta ${current.cards.length + 1}`,
+                      subtitle: "",
                       image: "",
                       active: true,
                     },
@@ -1588,81 +1077,23 @@ function renderModuleEditor(
   if (moduleKey === "servicios" && isServicesContent(content)) {
     return (
       <div className="space-y-5">
-        <SectionShell title="Encabezado de la sección">
-          <Field
-            label="Badge"
-            value={content.badge}
-            onChange={(value) =>
-              setDraftContent((current) =>
-                current && isServicesContent(current) ? { ...current, badge: value } : current
-              )
-            }
-          />
-          <Field
-            label="Título"
-            value={content.title}
-            onChange={(value) =>
-              setDraftContent((current) =>
-                current && isServicesContent(current) ? { ...current, title: value } : current
-              )
-            }
-          />
-          <TextAreaField
-            label="Descripción"
-            value={content.description}
-            onChange={(value) =>
-              setDraftContent((current) =>
-                current && isServicesContent(current)
-                  ? { ...current, description: value }
-                  : current
-              )
-            }
-          />
-        </SectionShell>
-
-        <SectionShell title="Botón de la sección">
-          <div className="grid gap-4 md:grid-cols-2">
-            <Field
-              label="Texto del botón"
-              value={content.buttonText}
-              onChange={(value) =>
-                setDraftContent((current) =>
-                  current && isServicesContent(current)
-                    ? { ...current, buttonText: value }
-                    : current
-                )
-              }
-            />
-            <Field
-              label="Enlace del botón"
-              value={content.buttonLink}
-              onChange={(value) =>
-                setDraftContent((current) =>
-                  current && isServicesContent(current)
-                    ? { ...current, buttonLink: value }
-                    : current
-                )
-              }
-            />
-          </div>
-        </SectionShell>
-
         <SectionShell title="Tarjetas de servicios">
           {content.cards.map((card, index) => (
             <div key={card.id} className="rounded-2xl border border-[#e7dcc9] bg-[#fffdfa] p-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <Field
-                  label="Nombre del servicio"
-                  value={card.title}
-                  onChange={(value) =>
-                    setDraftContent((current) => {
-                      if (!current || !isServicesContent(current)) return current;
-                      const nextCards = [...current.cards];
-                      nextCards[index] = { ...nextCards[index], title: value };
-                      return { ...current, cards: nextCards };
-                    })
-                  }
-                />
+              <ImageUploader
+                label={`Imagen del servicio ${index + 1}`}
+                image={card.image}
+                onChange={(value) =>
+                  setDraftContent((current) => {
+                    if (!current || !isServicesContent(current)) return current;
+                    const nextCards = [...current.cards];
+                    nextCards[index] = { ...nextCards[index], image: value };
+                    return { ...current, cards: nextCards };
+                  })
+                }
+                heightClass="h-36"
+              />
+              <div className="mt-4 flex items-center justify-between gap-3">
                 <ToggleField
                   label="Visible"
                   checked={card.visible}
@@ -1675,37 +1106,6 @@ function renderModuleEditor(
                     })
                   }
                 />
-              </div>
-              <div className="mt-4">
-                <TextAreaField
-                  label="Descripción del servicio"
-                  value={card.description}
-                  onChange={(value) =>
-                    setDraftContent((current) => {
-                      if (!current || !isServicesContent(current)) return current;
-                      const nextCards = [...current.cards];
-                      nextCards[index] = { ...nextCards[index], description: value };
-                      return { ...current, cards: nextCards };
-                    })
-                  }
-                />
-              </div>
-              <div className="mt-4">
-                <ImageUploader
-                  label="Imagen del servicio"
-                  image={card.image}
-                  onChange={(value) =>
-                    setDraftContent((current) => {
-                      if (!current || !isServicesContent(current)) return current;
-                      const nextCards = [...current.cards];
-                      nextCards[index] = { ...nextCards[index], image: value };
-                      return { ...current, cards: nextCards };
-                    })
-                  }
-                  heightClass="h-36"
-                />
-              </div>
-              <div className="mt-4 flex justify-end">
                 <button
                   type="button"
                   onClick={() =>
@@ -1735,8 +1135,8 @@ function renderModuleEditor(
                     ...current.cards,
                     {
                       id: `service-${Date.now()}`,
-                      title: "Nuevo servicio",
-                      description: "Descripción del nuevo servicio.",
+                      title: `Servicio ${current.cards.length + 1}`,
+                      description: "",
                       image: "",
                       visible: true,
                     },
@@ -1757,155 +1157,7 @@ function renderModuleEditor(
   if (moduleKey === "compromiso" && isCompromisoContent(content)) {
     return (
       <div className="space-y-5">
-        <SectionShell title="Encabezado y botones">
-          <Field
-            label="Badge"
-            value={content.badge}
-            onChange={(value) =>
-              setDraftContent((current) =>
-                current && isCompromisoContent(current) ? { ...current, badge: value } : current
-              )
-            }
-          />
-          <Field
-            label="Título"
-            value={content.title}
-            onChange={(value) =>
-              setDraftContent((current) =>
-                current && isCompromisoContent(current) ? { ...current, title: value } : current
-              )
-            }
-          />
-          <TextAreaField
-            label="Descripción"
-            value={content.description}
-            onChange={(value) =>
-              setDraftContent((current) =>
-                current && isCompromisoContent(current)
-                  ? { ...current, description: value }
-                  : current
-              )
-            }
-            rows={5}
-          />
-          <div className="grid gap-4 md:grid-cols-2">
-            <Field
-              label="Texto botón principal"
-              value={content.primaryButtonText}
-              onChange={(value) =>
-                setDraftContent((current) =>
-                  current && isCompromisoContent(current)
-                    ? { ...current, primaryButtonText: value }
-                    : current
-                )
-              }
-            />
-            <Field
-              label="Enlace botón principal"
-              value={content.primaryButtonLink}
-              onChange={(value) =>
-                setDraftContent((current) =>
-                  current && isCompromisoContent(current)
-                    ? { ...current, primaryButtonLink: value }
-                    : current
-                )
-              }
-            />
-            <Field
-              label="Texto botón secundario"
-              value={content.secondaryButtonText}
-              onChange={(value) =>
-                setDraftContent((current) =>
-                  current && isCompromisoContent(current)
-                    ? { ...current, secondaryButtonText: value }
-                    : current
-                )
-              }
-            />
-            <Field
-              label="Enlace botón secundario"
-              value={content.secondaryButtonLink}
-              onChange={(value) =>
-                setDraftContent((current) =>
-                  current && isCompromisoContent(current)
-                    ? { ...current, secondaryButtonLink: value }
-                    : current
-                )
-              }
-            />
-          </div>
-        </SectionShell>
-
-        <SectionShell title="Bloques de apoyo inferiores">
-          {content.featureBlocks.map((block, index) => (
-            <div key={block.id} className="rounded-2xl border border-[#e7dcc9] bg-[#fffdfa] p-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <Field
-                  label={`Título bloque ${index + 1}`}
-                  value={block.title}
-                  onChange={(value) =>
-                    setDraftContent((current) => {
-                      if (!current || !isCompromisoContent(current)) return current;
-                      const next = [...current.featureBlocks];
-                      next[index] = { ...next[index], title: value };
-                      return { ...current, featureBlocks: next };
-                    })
-                  }
-                />
-                <ToggleField
-                  label="Visible"
-                  checked={block.visible}
-                  onChange={(value) =>
-                    setDraftContent((current) => {
-                      if (!current || !isCompromisoContent(current)) return current;
-                      const next = [...current.featureBlocks];
-                      next[index] = { ...next[index], visible: value };
-                      return { ...current, featureBlocks: next };
-                    })
-                  }
-                />
-              </div>
-              <div className="mt-4">
-                <TextAreaField
-                  label="Texto del bloque"
-                  value={block.text}
-                  onChange={(value) =>
-                    setDraftContent((current) => {
-                      if (!current || !isCompromisoContent(current)) return current;
-                      const next = [...current.featureBlocks];
-                      next[index] = { ...next[index], text: value };
-                      return { ...current, featureBlocks: next };
-                    })
-                  }
-                />
-              </div>
-            </div>
-          ))}
-        </SectionShell>
-
         <SectionShell title="Imagen principal grande">
-          <Field
-            label="Título de la imagen principal"
-            value={content.mainImage.title}
-            onChange={(value) =>
-              setDraftContent((current) =>
-                current && isCompromisoContent(current)
-                  ? { ...current, mainImage: { ...current.mainImage, title: value } }
-                  : current
-              )
-            }
-          />
-          <Field
-            label="Subtítulo de la imagen principal"
-            value={content.mainImage.subtitle}
-            onChange={(value) =>
-              setDraftContent((current) =>
-                current && isCompromisoContent(current)
-                  ? { ...current, mainImage: { ...current.mainImage, subtitle: value } }
-                  : current
-              )
-            }
-          />
           <ImageUploader
             label="Imagen principal"
             image={content.mainImage.image}
@@ -1923,47 +1175,19 @@ function renderModuleEditor(
         <SectionShell title="Imágenes secundarias">
           {content.sideImages.map((image, index) => (
             <div key={image.id} className="rounded-2xl border border-[#e7dcc9] bg-[#fffdfa] p-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <Field
-                  label={`Título imagen ${index + 1}`}
-                  value={image.title}
-                  onChange={(value) =>
-                    setDraftContent((current) => {
-                      if (!current || !isCompromisoContent(current)) return current;
-                      const next = [...current.sideImages];
-                      next[index] = { ...next[index], title: value };
-                      return { ...current, sideImages: next };
-                    })
-                  }
-                />
-                <Field
-                  label={`Subtítulo imagen ${index + 1}`}
-                  value={image.subtitle}
-                  onChange={(value) =>
-                    setDraftContent((current) => {
-                      if (!current || !isCompromisoContent(current)) return current;
-                      const next = [...current.sideImages];
-                      next[index] = { ...next[index], subtitle: value };
-                      return { ...current, sideImages: next };
-                    })
-                  }
-                />
-              </div>
-              <div className="mt-4">
-                <ImageUploader
-                  label={`Imagen secundaria ${index + 1}`}
-                  image={image.image}
-                  onChange={(value) =>
-                    setDraftContent((current) => {
-                      if (!current || !isCompromisoContent(current)) return current;
-                      const next = [...current.sideImages];
-                      next[index] = { ...next[index], image: value };
-                      return { ...current, sideImages: next };
-                    })
-                  }
-                  heightClass="h-36"
-                />
-              </div>
+              <ImageUploader
+                label={`Imagen secundaria ${index + 1}`}
+                image={image.image}
+                onChange={(value) =>
+                  setDraftContent((current) => {
+                    if (!current || !isCompromisoContent(current)) return current;
+                    const next = [...current.sideImages];
+                    next[index] = { ...next[index], image: value };
+                    return { ...current, sideImages: next };
+                  })
+                }
+                heightClass="h-36"
+              />
             </div>
           ))}
         </SectionShell>
@@ -1973,53 +1197,11 @@ function renderModuleEditor(
 
   if (moduleKey === "cta" && isCtaContent(content)) {
     return (
-      <div className="space-y-5">
-        <SectionShell title="Contenido del CTA final">
-          <Field
-            label="Título"
-            value={content.title}
-            onChange={(value) =>
-              setDraftContent((current) =>
-                current && isCtaContent(current) ? { ...current, title: value } : current
-              )
-            }
-          />
-          <TextAreaField
-            label="Descripción"
-            value={content.description}
-            onChange={(value) =>
-              setDraftContent((current) =>
-                current && isCtaContent(current)
-                  ? { ...current, description: value }
-                  : current
-              )
-            }
-            rows={5}
-          />
-          <div className="grid gap-4 md:grid-cols-2">
-            <Field
-              label="Texto del botón"
-              value={content.buttonText}
-              onChange={(value) =>
-                setDraftContent((current) =>
-                  current && isCtaContent(current)
-                    ? { ...current, buttonText: value }
-                    : current
-                )
-              }
-            />
-            <Field
-              label="Enlace"
-              value={content.link}
-              onChange={(value) =>
-                setDraftContent((current) =>
-                  current && isCtaContent(current) ? { ...current, link: value } : current
-                )
-              }
-            />
-          </div>
-        </SectionShell>
-      </div>
+      <SectionShell title="CTA final">
+        <p className="text-sm text-slate-600">
+          Esta sección no tiene imágenes configurables por ahora. Su texto quedó fijo en código.
+        </p>
+      </SectionShell>
     );
   }
 
@@ -2027,7 +1209,10 @@ function renderModuleEditor(
 }
 
 export default function AdminHomePage() {
-  const initialHomeContent = useMemo(() => DEFAULT_HOME_CONTENT, []);
+  const initialHomeContent = useMemo(
+    () => enforceHomeFixedText(DEFAULT_HOME_CONTENT),
+    []
+  );
   const [modules, setModules] = useState<HomeModule[]>(() =>
     createModulesFromHomeContent(initialHomeContent)
   );
@@ -2049,7 +1234,7 @@ export default function AdminHomePage() {
         }
 
         const payload = (await response.json()) as unknown;
-        const normalized = resolveHomeContent(payload);
+        const normalized = enforceHomeFixedText(resolveHomeContent(payload));
         if (!mounted) return;
 
         setModules(createModulesFromHomeContent(normalized));
