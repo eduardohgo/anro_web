@@ -8,7 +8,6 @@ import {
   ShieldCheck,
   Sparkles,
   Trash2,
-  Upload,
   Wrench,
 } from "lucide-react";
 import type { ChangeEvent, ReactNode } from "react";
@@ -861,108 +860,6 @@ function InlineEditorShell({
   );
 }
 
-interface CloudinaryUploadResult {
-  public_id: string;
-  url: string;
-  secure_url: string;
-  format?: string;
-  width?: number;
-  height?: number;
-  bytes?: number;
-}
-
-async function getCloudinarySignature() {
-  const response = await fetch("/api/cloudinary/sign", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ folder: "anro/servicios" }),
-  });
-
-  if (!response.ok) {
-    throw new Error("No se pudo generar la firma de Cloudinary.");
-  }
-
-  return (await response.json()) as {
-    timestamp: number;
-    folder: string;
-    signature: string;
-    apiKey: string;
-    cloudName: string;
-  };
-}
-
-async function uploadImageToCloudinary(file: File): Promise<CloudinaryUploadResult> {
-  const signatureData = await getCloudinarySignature();
-
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("api_key", signatureData.apiKey);
-  formData.append("timestamp", String(signatureData.timestamp));
-  formData.append("signature", signatureData.signature);
-  formData.append("folder", signatureData.folder);
-
-  const response = await fetch(
-    `https://api.cloudinary.com/v1_1/${signatureData.cloudName}/image/upload`,
-    {
-      method: "POST",
-      body: formData,
-    }
-  );
-
-  if (!response.ok) {
-    throw new Error("No se pudo subir la imagen a Cloudinary.");
-  }
-
-  return (await response.json()) as CloudinaryUploadResult;
-}
-
-async function registerMediaAsset({
-  sectionKey,
-  upload,
-}: {
-  sectionKey: string;
-  upload: CloudinaryUploadResult;
-}) {
-  await fetch("/api/admin/media", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      pageKey: "servicios",
-      sectionKey,
-      publicId: upload.public_id,
-      url: upload.url,
-      secureUrl: upload.secure_url,
-      format: upload.format,
-      width: upload.width,
-      height: upload.height,
-      bytes: upload.bytes,
-    }),
-  });
-}
-
-async function handleImageFile(
-  event: ChangeEvent<HTMLInputElement>,
-  sectionKey: string,
-  onReady: (url: string) => void | Promise<void>,
-  onUploadingChange: (uploading: boolean) => void
-) {
-  const file = event.target.files?.[0];
-  if (!file) return;
-
-  try {
-    onUploadingChange(true);
-    const upload = await uploadImageToCloudinary(file);
-    await registerMediaAsset({ sectionKey, upload });
-    await onReady(upload.secure_url || upload.url);
-  } catch (error) {
-    console.error("No fue posible subir/registrar la imagen.", error);
-    alert("No fue posible subir la imagen en este momento.");
-  } finally {
-    onUploadingChange(false);
-    event.target.value = "";
-  }
-}
-
 function ImageUploader({
   label,
   image,
@@ -973,25 +870,16 @@ function ImageUploader({
   label: string;
   image: string;
   onChange: (value: string) => void | Promise<void>;
-  sectionKey: string;
+  sectionKey?: string;
   heightClass?: string;
 }) {
-  const [isUploading, setIsUploading] = useState(false);
-
+  void sectionKey;
   return (
     <div className="space-y-4 rounded-[24px] border border-[#e7dcc9] bg-[linear-gradient(180deg,#fffdfa_0%,#f8f2e8_100%)] p-4 shadow-[0_14px_30px_rgba(15,23,42,0.05)]">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm font-medium text-[#2d3b52]">{label}</p>
         <label className="inline-flex cursor-pointer items-center gap-2 rounded-2xl border border-[#d9ccb6] bg-white px-4 py-2.5 text-sm font-semibold text-[#314058] shadow-sm transition hover:-translate-y-0.5 hover:bg-[#fff8ed]">
-          <Upload className="h-4 w-4" />
-          {isUploading ? "Subiendo..." : "Subir imagen"}
-          <input
-            type="file"
-            accept="image/*"
-            className="hidden"
-            disabled={isUploading}
-            onChange={(event) => handleImageFile(event, sectionKey, onChange, setIsUploading)}
-          />
+          Imagen estática
         </label>
       </div>
 

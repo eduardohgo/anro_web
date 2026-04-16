@@ -4,25 +4,12 @@ import HeroCarousel from "@/components/Home/HeroCarousel";
 import {
   DEFAULT_HOME_CONTENT,
   enforceHomeFixedText,
-  resolveHomeContent,
 } from "@/lib/home-content";
-import { getPageContent } from "@/lib/page-content";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+export const dynamic = "force-static";
 
 export default async function HomePage() {
-  let storedContent: unknown = null;
-
-  try {
-    storedContent = await getPageContent<unknown>("home");
-  } catch (error) {
-    console.error("No fue posible cargar Home desde Neon.", error);
-  }
-
-  const homeContent = enforceHomeFixedText(
-    resolveHomeContent(storedContent ?? DEFAULT_HOME_CONTENT)
-  );
+  const homeContent = enforceHomeFixedText(DEFAULT_HOME_CONTENT);
 
   const developmentCards = [...homeContent.developmentSection.cards]
     .filter((card) => card.active)

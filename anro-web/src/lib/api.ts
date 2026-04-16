@@ -4,10 +4,9 @@ import {
   PodcastEpisode,
   PodcastEpisodePayload,
   PodcastStatus,
-  UploadImageResponse,
 } from "@/lib/types";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "http://localhost:5000/api";
+const API_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "/api";
 
 interface RequestOptions extends RequestInit {
   auth?: boolean;
@@ -44,6 +43,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   const response = await fetch(`${API_URL}${path}`, {
     ...options,
     headers,
+    credentials: "include",
     cache: "no-store",
   });
 
@@ -113,19 +113,6 @@ export const podcastAdminApi = {
       method: "PATCH",
       auth: true,
       body: JSON.stringify({ isFeatured }),
-    });
-  },
-};
-
-export const uploadAdminApi = {
-  uploadPodcastImage(file: File) {
-    const formData = new FormData();
-    formData.append("image", file);
-
-    return request<UploadImageResponse>("/admin/uploads/podcast-image", {
-      method: "POST",
-      auth: true,
-      body: formData,
     });
   },
 };

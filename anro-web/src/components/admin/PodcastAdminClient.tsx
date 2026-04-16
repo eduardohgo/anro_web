@@ -32,8 +32,7 @@ const STATUS_FILTERS: Array<{ label: string; value: "ALL" | PodcastStatus }> = [
   { label: "Todos", value: "ALL" },
   { label: "Borrador", value: "DRAFT" },
   { label: "Publicado", value: "PUBLISHED" },
-  { label: "Archivado", value: "ARCHIVED" },
-];
+  ];
 
 const PLATFORM_FILTERS: Array<{ label: string; value: "ALL" | PodcastPlatform }> = [
   { label: "Todas", value: "ALL" },
@@ -76,9 +75,7 @@ function formatDate(date: string | null) {
 }
 
 function nextStatus(current: PodcastStatus): PodcastStatus {
-  if (current === "DRAFT") return "PUBLISHED";
-  if (current === "PUBLISHED") return "ARCHIVED";
-  return "DRAFT";
+  return current === "DRAFT" ? "PUBLISHED" : "DRAFT";
 }
 
 function getStatusLabel(status: PodcastStatus) {
@@ -87,8 +84,6 @@ function getStatusLabel(status: PodcastStatus) {
       return "Borrador";
     case "PUBLISHED":
       return "Publicado";
-    case "ARCHIVED":
-      return "Archivado";
     default:
       return status;
   }
@@ -769,13 +764,7 @@ function EpisodeCard({
             onClick={onEdit}
           />
           <ActionButton
-            label={
-              episode.status === "PUBLISHED"
-                ? "Archivar"
-                : episode.status === "ARCHIVED"
-                  ? "Pasar a borrador"
-                  : "Publicar"
-            }
+            label={episode.status === "PUBLISHED" ? "Pasar a borrador" : "Publicar"}
             onClick={onStatus}
             loading={statusLoading}
           />
@@ -895,9 +884,7 @@ function StatusBadge({ status }: { status: PodcastStatus }) {
   const tone =
     status === "PUBLISHED"
       ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-      : status === "ARCHIVED"
-        ? "border-slate-200 bg-slate-100 text-slate-700"
-        : "border-amber-200 bg-amber-50 text-amber-700";
+      : "border-amber-200 bg-amber-50 text-amber-700";
 
   return (
     <span

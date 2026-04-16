@@ -68,8 +68,7 @@ const platformOptions: Array<{ label: string; value: PodcastPlatform }> = [
 const statusOptions: Array<{ label: string; value: PodcastStatus }> = [
   { label: "Borrador", value: "DRAFT" },
   { label: "Publicado", value: "PUBLISHED" },
-  { label: "Archivado", value: "ARCHIVED" },
-];
+  ];
 
 function isValidUrl(value: string) {
   if (!value.trim()) return true;
