@@ -1,4 +1,4 @@
-export type PodcastStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
+export type PodcastStatus = "DRAFT" | "PUBLISHED";
 export type PodcastPlatform = "YOUTUBE" | "TIKTOK" | "SPOTIFY" | "OTHER";
 export type PodcastContentType = "EPISODE" | "CLIP" | "INTERVIEW" | "SHORT";
 
@@ -9,6 +9,7 @@ export interface AdminUser {
   role: string;
   isActive?: boolean;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface AuthResponse {
@@ -19,21 +20,22 @@ export interface AuthResponse {
 export interface PodcastEpisode {
   id: string;
   title: string;
-  slug: string;
+  slug?: string;
   shortDescription: string | null;
   fullDescription: string | null;
-  contentType: PodcastContentType;
+  contentType?: PodcastContentType;
   platform: PodcastPlatform;
   externalUrl: string | null;
   embedUrl: string | null;
   thumbnailUrl: string | null;
-  episodeNumber: number | null;
-  seasonNumber: number | null;
-  duration: string | null;
-  guests: string | null;
+  episodeNumber?: number | null;
+  seasonNumber?: number | null;
+  duration?: string | null;
+  guests?: string | null;
   publishedAt: string | null;
   status: PodcastStatus;
   isFeatured: boolean;
+  featured?: boolean;
   displayOrder: number;
   createdAt: string;
   updatedAt: string;
@@ -61,9 +63,3 @@ export interface PodcastEpisodePayload {
 export type PodcastEpisodeField = keyof PodcastEpisodePayload;
 
 export type PodcastEpisodeErrors = Partial<Record<PodcastEpisodeField, string>>;
-
-export interface UploadImageResponse {
-  message: string;
-  filename: string;
-  imageUrl: string;
-}
