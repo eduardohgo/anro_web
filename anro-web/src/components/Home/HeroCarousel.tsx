@@ -2,64 +2,58 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MapPinIcon } from "@heroicons/react/24/outline";
-import {
-  DEFAULT_HOME_CONTENT,
-  enforceHomeFixedText,
-  HomeHeroSection,
-  HomeHeroSlide,
-  resolveHomeContent,
-} from "@/lib/home-content";
+import type { HomeHeroSection, HomeHeroSlide } from "@/lib/home-content";
 
-export default function HeroCarousel() {
-  const [slides, setSlides] = useState<HomeHeroSlide[]>(DEFAULT_HOME_CONTENT.heroSlides);
-  const [heroSection, setHeroSection] = useState<HomeHeroSection>(DEFAULT_HOME_CONTENT.heroSection);
+type HeroCarouselProps = {
+  slides: HomeHeroSlide[];
+  heroSection: HomeHeroSection;
+};
+
+export default function HeroCarousel({ slides, heroSection }: HeroCarouselProps) {
+  const safeSlides = useMemo(
+    () => slides.filter((slide) => slide.src),
+    [slides]
+  );
+
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
-    let mounted = true;
+    if (safeSlides.length <= 1) return;
 
-    const applyContent = async () => {
-      try {
-        const response = await fetch("/api/public/home", { cache: "no-store" });
-        if (!response.ok) {
-          throw new Error("No fue posible cargar contenido de Home.");
-        }
-
-        const payload = (await response.json()) as unknown;
-        const config = enforceHomeFixedText(resolveHomeContent(payload));
-
-        if (!mounted) return;
-        setSlides(config.heroSlides);
-        setHeroSection(config.heroSection);
-        setIndex((current) => (current >= config.heroSlides.length ? 0 : current));
-      } catch (error) {
-        console.error("No fue posible cargar el Hero desde Neon.", error);
-      }
-    };
-
-    void applyContent();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  useEffect(() => {
     const id = window.setInterval(() => {
-      setIndex((prev) => (prev + 1) % slides.length);
+      setIndex((prev) => (prev + 1) % safeSlides.length);
     }, 5000);
-    return () => window.clearInterval(id);
-  }, [slides.length]);
 
-  const goPrev = () => setIndex((prev) => (prev - 1 + slides.length) % slides.length);
-  const goNext = () => setIndex((prev) => (prev + 1) % slides.length);
+    return () => window.clearInterval(id);
+  }, [safeSlides.length]);
+
+  if (safeSlides.length === 0) return null;
+
+  const activeIndex = index % safeSlides.length;
+  const currentSlide = safeSlides[activeIndex];
+
+  const goPrev = () => {
+    setIndex((prev) => (prev - 1 + safeSlides.length) % safeSlides.length);
+  };
+
+  const goNext = () => {
+    setIndex((prev) => (prev + 1) % safeSlides.length);
+  };
 
   return (
     <section className="relative h-[90vh] min-h-[700px] w-full overflow-hidden">
       <div className="absolute inset-0 h-full w-full">
-        <Image src={slides[index].src} alt={slides[index].alt} fill priority className="object-cover" />
+        <Image
+          src={currentSlide.src}
+          alt={currentSlide.alt}
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover"
+        />
+
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(31,26,23,0.78)_0%,rgba(44,38,34,0.62)_38%,rgba(44,38,34,0.35)_68%,rgba(31,26,23,0.62)_100%)]" />
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.18)_0%,rgba(0,0,0,0.28)_100%)]" />
       </div>
@@ -84,17 +78,27 @@ export default function HeroCarousel() {
 
               <h1 className="mt-5 text-4xl font-extrabold leading-[1.02] tracking-tight md:text-5xl lg:text-6xl">
                 {heroSection.titleLineOne} <br />
-                <span className="text-[#d4a62a]">{heroSection.titleHighlight}</span>
+                <span className="text-[#d4a62a]">
+                  {heroSection.titleHighlight}
+                </span>
               </h1>
 
-              <p className="mt-5 max-w-2xl text-lg leading-relaxed text-[#f1e7db] md:text-xl">{heroSection.description}</p>
+              <p className="mt-5 max-w-2xl text-lg leading-relaxed text-[#f1e7db] md:text-xl">
+                {heroSection.description}
+              </p>
 
               <div className="mt-8 flex flex-wrap gap-4">
-                <Link href={heroSection.primaryButtonLink} className="rounded-2xl bg-[#d4a62a] px-6 py-3 font-bold text-black transition hover:bg-[#be931f]">
+                <Link
+                  href={heroSection.primaryButtonLink}
+                  className="rounded-2xl bg-[#d4a62a] px-6 py-3 font-bold text-black transition hover:bg-[#be931f]"
+                >
                   {heroSection.primaryButtonText}
                 </Link>
 
-                <Link href={heroSection.secondaryButtonLink} className="rounded-2xl border border-white/35 bg-white/10 px-6 py-3 font-bold text-white backdrop-blur transition hover:bg-white/15">
+                <Link
+                  href={heroSection.secondaryButtonLink}
+                  className="rounded-2xl border border-white/35 bg-white/10 px-6 py-3 font-bold text-white backdrop-blur transition hover:bg-white/15"
+                >
                   {heroSection.secondaryButtonText}
                 </Link>
               </div>
@@ -115,15 +119,35 @@ export default function HeroCarousel() {
 
                 <div className="mt-5 space-y-4">
                   {heroSection.quickFacts.map((fact, idx) => (
-                    <div key={fact.id} className={`flex items-center justify-between ${idx < heroSection.quickFacts.length - 1 ? "border-b border-white/12 pb-3" : ""}`}>
-                      <span className="font-medium text-[#f1e7db]">{fact.label}</span>
-                      <span className={`font-bold ${idx === heroSection.quickFacts.length - 1 ? "text-[#d4a62a]" : "text-white"}`}>{fact.value}</span>
+                    <div
+                      key={fact.id}
+                      className={`flex items-center justify-between ${
+                        idx < heroSection.quickFacts.length - 1
+                          ? "border-b border-white/12 pb-3"
+                          : ""
+                      }`}
+                    >
+                      <span className="font-medium text-[#f1e7db]">
+                        {fact.label}
+                      </span>
+                      <span
+                        className={`font-bold ${
+                          idx === heroSection.quickFacts.length - 1
+                            ? "text-[#d4a62a]"
+                            : "text-white"
+                        }`}
+                      >
+                        {fact.value}
+                      </span>
                     </div>
                   ))}
                 </div>
 
                 <div className="mt-6 border-t border-white/12 pt-4">
-                  <Link href={heroSection.locationLink} className="inline-flex items-center gap-2 text-sm font-semibold text-[#e7c978] transition hover:text-[#d4a62a]">
+                  <Link
+                    href={heroSection.locationLink}
+                    className="inline-flex items-center gap-2 text-sm font-semibold text-[#e7c978] transition hover:text-[#d4a62a]"
+                  >
                     <MapPinIcon className="h-5 w-5" />
                     {heroSection.locationLinkText}
                   </Link>
@@ -134,19 +158,38 @@ export default function HeroCarousel() {
         </div>
       </div>
 
-      <button onClick={goPrev} className="absolute left-4 top-1/2 z-20 -translate-y-1/2 rounded-full border border-white/15 bg-[rgba(31,26,23,0.45)] p-3 text-white backdrop-blur-sm transition hover:bg-[rgba(31,26,23,0.65)]" aria-label="Anterior">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-6 w-6"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" /></svg>
-      </button>
+      {safeSlides.length > 1 && (
+        <>
+          <button
+            onClick={goPrev}
+            className="absolute left-4 top-1/2 z-20 -translate-y-1/2 rounded-full border border-white/15 bg-[rgba(31,26,23,0.45)] px-4 py-2 text-3xl text-white backdrop-blur-sm transition hover:bg-[rgba(31,26,23,0.65)]"
+            aria-label="Anterior"
+          >
+            ‹
+          </button>
 
-      <button onClick={goNext} className="absolute right-4 top-1/2 z-20 -translate-y-1/2 rounded-full border border-white/15 bg-[rgba(31,26,23,0.45)] p-3 text-white backdrop-blur-sm transition hover:bg-[rgba(31,26,23,0.65)]" aria-label="Siguiente">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-6 w-6"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
-      </button>
+          <button
+            onClick={goNext}
+            className="absolute right-4 top-1/2 z-20 -translate-y-1/2 rounded-full border border-white/15 bg-[rgba(31,26,23,0.45)] px-4 py-2 text-3xl text-white backdrop-blur-sm transition hover:bg-[rgba(31,26,23,0.65)]"
+            aria-label="Siguiente"
+          >
+            ›
+          </button>
 
-      <div className="absolute bottom-6 left-1/2 z-20 flex -translate-x-1/2 gap-2">
-        {slides.map((_, i) => (
-          <button key={i} onClick={() => setIndex(i)} className={`h-2 rounded-full transition-all ${i === index ? "w-8 bg-[#d4a62a]" : "w-2 bg-white/70"}`} aria-label={`Ir a slide ${i + 1}`} />
-        ))}
-      </div>
+          <div className="absolute bottom-6 left-1/2 z-20 flex -translate-x-1/2 gap-2">
+            {safeSlides.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setIndex(i)}
+                className={`h-2 rounded-full transition-all ${
+                  i === activeIndex ? "w-8 bg-[#d4a62a]" : "w-2 bg-white/70"
+                }`}
+                aria-label={`Ir a slide ${i + 1}`}
+              />
+            ))}
+          </div>
+        </>
+      )}
     </section>
   );
 }

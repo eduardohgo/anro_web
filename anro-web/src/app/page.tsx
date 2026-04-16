@@ -1,69 +1,46 @@
-"use client";
-
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
 import HeroCarousel from "@/components/Home/HeroCarousel";
 import {
   DEFAULT_HOME_CONTENT,
   enforceHomeFixedText,
   resolveHomeContent,
 } from "@/lib/home-content";
+import { getPageContent } from "@/lib/page-content";
 
-export default function HomePage() {
-  const [homeContent, setHomeContent] = useState(DEFAULT_HOME_CONTENT);
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
-  useEffect(() => {
-    let mounted = true;
+export default async function HomePage() {
+  let storedContent: unknown = null;
 
-    const fetchHomeContent = async () => {
-      try {
-        const response = await fetch("/api/public/home", {
-          method: "GET",
-          cache: "no-store",
-        });
+  try {
+    storedContent = await getPageContent<unknown>("home");
+  } catch (error) {
+    console.error("No fue posible cargar Home desde Neon.", error);
+  }
 
-        if (!response.ok) {
-          throw new Error("No fue posible cargar Home desde la API pública.");
-        }
-
-        const payload = (await response.json()) as unknown;
-        if (!mounted) return;
-        setHomeContent(enforceHomeFixedText(resolveHomeContent(payload)));
-      } catch (error) {
-        console.error("No fue posible cargar Home desde Neon.", error);
-      }
-    };
-
-    void fetchHomeContent();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  const developmentCards = useMemo(
-    () =>
-      [...homeContent.developmentSection.cards]
-        .filter((card) => card.active)
-        .sort((a, b) => a.order - b.order),
-    [homeContent.developmentSection.cards]
+  const homeContent = enforceHomeFixedText(
+    resolveHomeContent(storedContent ?? DEFAULT_HOME_CONTENT)
   );
 
-  const serviceCards = useMemo(
-    () =>
-      [...homeContent.servicesSection.cards]
-        .filter((card) => card.active)
-        .sort((a, b) => a.order - b.order),
-    [homeContent.servicesSection.cards]
-  );
+  const developmentCards = [...homeContent.developmentSection.cards]
+    .filter((card) => card.active)
+    .sort((a, b) => a.order - b.order);
+
+  const serviceCards = [...homeContent.servicesSection.cards]
+    .filter((card) => card.active)
+    .sort((a, b) => a.order - b.order);
 
   const commitment = homeContent.commitmentSection;
   const cta = homeContent.ctaSection;
 
   return (
     <main className="bg-[#fcfaf7]">
-      <HeroCarousel />
+      <HeroCarousel
+        slides={homeContent.heroSlides}
+        heroSection={homeContent.heroSection}
+      />
 
       <div className="mx-auto flex w-full max-w-[1850px] flex-col gap-10 px-4 py-10 md:px-6 xl:px-10">
         <section className="relative overflow-hidden rounded-[32px] border border-black/8 bg-[#f5f1eb] p-6 md:p-8">
@@ -72,6 +49,7 @@ export default function HomePage() {
               src={homeContent.developmentSection.backgroundImage}
               alt={homeContent.developmentSection.title}
               fill
+              sizes="100vw"
               className="object-cover opacity-20"
             />
           </div>
@@ -101,6 +79,7 @@ export default function HomePage() {
                         src={card.image}
                         alt={card.title}
                         fill
+                        sizes="(max-width: 768px) 100vw, 33vw"
                         className="object-cover"
                       />
                     </div>
@@ -119,7 +98,9 @@ export default function HomePage() {
             </div>
 
             <aside className="rounded-[28px] bg-white/80 p-5 shadow-[0_15px_35px_rgba(0,0,0,0.06)] backdrop-blur">
-              <h3 className="text-xl font-bold text-[#1f1a17]">Información rápida</h3>
+              <h3 className="text-xl font-bold text-[#1f1a17]">
+                Información rápida
+              </h3>
 
               <ul className="mt-5 space-y-4">
                 {homeContent.developmentSection.sideList.map((item, index) => (
@@ -177,6 +158,7 @@ export default function HomePage() {
                     src={card.image}
                     alt={card.title}
                     fill
+                    sizes="(max-width: 768px) 100vw, 25vw"
                     className="object-cover"
                   />
                 </div>
@@ -250,6 +232,7 @@ export default function HomePage() {
                       src={commitment.mainImage.image}
                       alt={commitment.mainImage.alt}
                       fill
+                      sizes="(max-width: 768px) 100vw, 50vw"
                       className="object-cover transition duration-500 group-hover:scale-105"
                     />
                   </div>
@@ -274,6 +257,7 @@ export default function HomePage() {
                         src={image.image}
                         alt={image.alt}
                         fill
+                        sizes="(max-width: 768px) 100vw, 25vw"
                         className="object-cover transition duration-500 group-hover:scale-105"
                       />
                     </div>
