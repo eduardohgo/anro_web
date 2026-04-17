@@ -1,27 +1,13 @@
 "use client";
 
 import { authStorage } from "@/lib/auth-storage";
-import {
-  BriefcaseBusiness,
-  Building2,
-  Headphones,
-  Home,
-  LayoutDashboard,
-  LogOut,
-  Mail,
-  Users,
-} from "lucide-react";
+import { Headphones, LayoutDashboard, LogOut } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 const NAV_ITEMS = [
   { href: "/admin", label: "Inicio", icon: LayoutDashboard },
   { href: "/admin/podcast", label: "Podcast", icon: Headphones },
-  { href: "/admin/home", label: "Home", icon: Home },
-  { href: "/admin/desarrollo", label: "Desarrollo", icon: Building2 },
-  { href: "/admin/servicios", label: "Servicios", icon: BriefcaseBusiness },
-  { href: "/admin/nosotros", label: "Nosotros", icon: Users },
-  { href: "/admin/contacto", label: "Contacto", icon: Mail },
 ] as const;
 
 function isActivePath(pathname: string, href: string) {
