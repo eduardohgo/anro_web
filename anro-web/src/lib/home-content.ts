@@ -37,7 +37,9 @@ export interface HomeVisualCard {
   id: string;
   title: string;
   tag: string;
-  image: string;
+  mediaType: "image" | "video";
+  src: string;
+  alt?: string;
   order: number;
   active: boolean;
 }
@@ -179,7 +181,9 @@ export const DEFAULT_HOME_CONTENT: HomeContentConfig = {
         id: "dev-1",
         title: "Primera etapa",
         tag: "Etapa 1",
-        image: "/fraccionamiento/primeraEtapa.jpg",
+        mediaType: "image",
+        src: "/fraccionamiento/primeraEtapa.jpg",
+        alt: "Primera etapa",
         order: 1,
         active: true,
       },
@@ -187,7 +191,9 @@ export const DEFAULT_HOME_CONTENT: HomeContentConfig = {
         id: "dev-2",
         title: "Segunda etapa",
         tag: "Etapa 2",
-        image: "/fraccionamiento/carrusel2.jpg",
+        mediaType: "image",
+        src: "/fraccionamiento/carrusel2.jpg",
+        alt: "Segunda etapa",
         order: 2,
         active: true,
       },
@@ -195,7 +201,9 @@ export const DEFAULT_HOME_CONTENT: HomeContentConfig = {
         id: "dev-3",
         title: "Recorrido virtual",
         tag: "Tour",
-        image: "/fraccionamiento/carrusel3.jpg",
+        mediaType: "video",
+        src: "/fraccionamiento/recorrido-virtual.mp4",
+        alt: "Recorrido virtual",
         order: 3,
         active: true,
       },
@@ -403,15 +411,20 @@ function sanitizeVisualCards(
   const cards = value
     .map((item, index) => {
       if (!item || typeof item !== "object") return null;
-      const card = item as Partial<HomeVisualCard>;
+      const card = item as Partial<HomeVisualCard> & { image?: string };
+      const fallbackCard = fallback[index] || fallback[0];
+      const mediaType = card.mediaType === "video" ? "video" : "image";
+      const src = text(
+        card.src ?? card.image,
+        fallbackCard?.src || "/fraccionamiento/carrusel1.jpg"
+      );
       return {
         id: text(card.id, `card-${index + 1}`),
         title: text(card.title, `Tarjeta ${index + 1}`),
         tag: text(card.tag, ""),
-        image: text(
-          card.image,
-          fallback[index]?.image || "/fraccionamiento/carrusel1.jpg"
-        ),
+        mediaType,
+        src,
+        alt: text(card.alt, card.title || fallbackCard?.alt || ""),
         order: num(card.order, index + 1),
         active: bool(card.active, true),
       };
@@ -649,10 +662,16 @@ export function enforceHomeFixedText(content: HomeContentConfig): HomeContentCon
   const developmentCards = content.developmentSection.cards.map((card, index) => ({
     ...fixed.developmentSection.cards[index],
     id: text(card.id, fixed.developmentSection.cards[index]?.id || `dev-${index + 1}`),
-    image: text(
-      card.image,
-      fixed.developmentSection.cards[index]?.image ||
-        DEFAULT_HOME_CONTENT.developmentSection.cards[0].image
+    mediaType: card.mediaType === "video" ? "video" : "image",
+    src: text(
+      card.src,
+      fixed.developmentSection.cards[index]?.src ||
+        DEFAULT_HOME_CONTENT.developmentSection.cards[0].src
+    ),
+    alt: text(
+      card.alt,
+      fixed.developmentSection.cards[index]?.alt ||
+        DEFAULT_HOME_CONTENT.developmentSection.cards[0].alt
     ),
     active: bool(card.active, true),
     order: index + 1,

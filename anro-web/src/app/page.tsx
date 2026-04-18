@@ -62,13 +62,26 @@ export default async function HomePage() {
                     className="overflow-hidden rounded-[28px] bg-white shadow-[0_15px_35px_rgba(0,0,0,0.08)]"
                   >
                     <div className="relative h-[240px] w-full">
-                      <Image
-                        src={card.image}
-                        alt={card.title}
-                        fill
-                        sizes="(max-width: 768px) 100vw, 33vw"
-                        className="object-cover"
-                      />
+                      {card.mediaType === "video" ? (
+                        <video
+                          src={card.src}
+                          autoPlay
+                          muted
+                          loop
+                          playsInline
+                          preload="metadata"
+                          aria-label={card.alt || card.title}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <Image
+                          src={card.src}
+                          alt={card.alt || card.title}
+                          fill
+                          sizes="(max-width: 768px) 100vw, 33vw"
+                          className="object-cover"
+                        />
+                      )}
                     </div>
 
                     <div className="p-5">
