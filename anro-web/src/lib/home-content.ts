@@ -119,17 +119,17 @@ export const DEFAULT_HOME_CONTENT: HomeContentConfig = {
   heroSlides: [
     {
       id: "hero-1",
-      src: "/fraccionamiento/carrusel1.jpg",
+      src: "/fraccionamiento/carrusel1.1.jpg",
       alt: "Fraccionamiento - imagen 1",
     },
     {
       id: "hero-2",
-      src: "/fraccionamiento/carrusel2.jpg",
+      src: "/fraccionamiento/carrusel3.3.jpg",
       alt: "Fraccionamiento - imagen 2",
     },
     {
       id: "hero-3",
-      src: "/fraccionamiento/carrusel3.jpg",
+      src: "/fraccionamiento/carrusel.jpg",
       alt: "Fraccionamiento - imagen 3",
     },
   ],
@@ -267,7 +267,7 @@ export const DEFAULT_HOME_CONTENT: HomeContentConfig = {
       },
     ],
     mainImage: {
-      image: "/fraccionamiento/carrusel1.jpg",
+      image: "/fraccionamiento/presencia.jpg",
       alt: "Presencia y avance real",
       title: "Presencia y avance real",
       subtitle: "Seguimiento constante del desarrollo.",
@@ -280,7 +280,7 @@ export const DEFAULT_HOME_CONTENT: HomeContentConfig = {
         subtitle: "Avance documentado del proyecto.",
       },
       {
-        image: "/fraccionamiento/carrusel3.jpg",
+        image: "/fraccionamiento/desarrollomarcha.jpg",
         alt: "Desarrollo en marcha",
         title: "Desarrollo en marcha",
         subtitle: "Obra y espacios en evolución.",
