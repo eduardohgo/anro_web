@@ -30,6 +30,13 @@ Variables requeridas:
 - `MONGODB_URI`
 - `JWT_SECRET`
 
+Variables para formulario de contacto (Brevo):
+
+- `BREVO_API_KEY`
+- `CONTACT_TO_EMAIL`
+- `CONTACT_FROM_EMAIL`
+- `CONTACT_FROM_NAME`
+
 ## Desarrollo local
 
 ```bash
