@@ -1,27 +1,13 @@
 "use client";
 
 import { authStorage } from "@/lib/auth-storage";
-import {
-  BriefcaseBusiness,
-  Building2,
-  Headphones,
-  Home,
-  LayoutDashboard,
-  LogOut,
-  Mail,
-  Users,
-} from "lucide-react";
+import { Headphones, LayoutDashboard, LogOut } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 const NAV_ITEMS = [
   { href: "/admin", label: "Inicio", icon: LayoutDashboard },
   { href: "/admin/podcast", label: "Podcast", icon: Headphones },
-  { href: "/admin/home", label: "Home", icon: Home },
-  { href: "/admin/desarrollo", label: "Desarrollo", icon: Building2 },
-  { href: "/admin/servicios", label: "Servicios", icon: BriefcaseBusiness },
-  { href: "/admin/nosotros", label: "Nosotros", icon: Users },
-  { href: "/admin/contacto", label: "Contacto", icon: Mail },
 ] as const;
 
 function isActivePath(pathname: string, href: string) {
@@ -46,7 +32,7 @@ export default function AdminSidebar({ adminName }: AdminSidebarProps) {
     <aside className="sticky top-0 flex h-screen w-full flex-col border-r border-[#d8ceb8] bg-[linear-gradient(180deg,#0d1b34_0%,#14284b_100%)] text-white shadow-[10px_0_40px_rgba(9,20,44,0.22)]">
       <div className="border-b border-white/10 px-5 py-6">
         <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#e0bf77]">ANRO</p>
-        <h1 className="mt-2 text-xl font-semibold">Admin Panel</h1>
+        <h1 className="mt-2 text-xl font-semibold">Panel Administrativo</h1>
         <p className="mt-3 text-xs text-slate-300">Sesión activa: {adminName}</p>
       </div>
 
