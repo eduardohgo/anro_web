@@ -1,7 +1,89 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
+import type { ChangeEvent, FormEvent } from "react";
 import { ArrowRight, Mail, Phone } from "lucide-react";
 
+type ContactFormData = {
+  nombre: string;
+  telefono: string;
+  correo: string;
+  motivo: string;
+  mensaje: string;
+  aceptaContacto: boolean;
+};
+
+const INITIAL_FORM_DATA: ContactFormData = {
+  nombre: "",
+  telefono: "",
+  correo: "",
+  motivo: "",
+  mensaje: "",
+  aceptaContacto: false,
+};
+
 export default function ContactoPage() {
+  const [formData, setFormData] = useState<ContactFormData>(INITIAL_FORM_DATA);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [feedback, setFeedback] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+
+  const handleInputChange = (
+    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
+  ) => {
+    const { name, value, type } = event.target;
+
+    setFormData((previous) => ({
+      ...previous,
+      [name]:
+        type === "checkbox"
+          ? (event.target as HTMLInputElement).checked
+          : value,
+    }));
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    setFeedback(null);
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const result: { ok: boolean; message: string } = await response.json();
+
+      if (!response.ok || !result.ok) {
+        throw new Error(result.message || "No se pudo enviar la solicitud.");
+      }
+
+      setFeedback({
+        type: "success",
+        message: result.message || "Solicitud enviada correctamente.",
+      });
+      setFormData(INITIAL_FORM_DATA);
+    } catch (error) {
+      setFeedback({
+        type: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Ocurrió un error al enviar tu solicitud. Inténtalo nuevamente.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <main className="bg-[#F2F1EC]">
       {/* =========================================================
@@ -535,7 +617,7 @@ export default function ContactoPage() {
                   </p>
                 </div>
 
-                <form className="space-y-5">
+                <form className="space-y-5" onSubmit={handleSubmit}>
                   <div className="grid gap-5 md:grid-cols-2">
                     <div>
                       <label className="mb-2 block text-sm font-medium text-[#F7F3EC]">
@@ -543,7 +625,11 @@ export default function ContactoPage() {
                       </label>
                       <input
                         type="text"
+                        name="nombre"
+                        value={formData.nombre}
+                        onChange={handleInputChange}
                         placeholder="Tu nombre"
+                        required
                         className="w-full rounded-[18px] border border-white/10 bg-white/8 px-4 py-3 text-sm text-[#F7F3EC] placeholder:text-white/45 outline-none transition focus:border-[#D0A52F] focus:ring-2 focus:ring-[#D0A52F]/20"
                       />
                     </div>
@@ -554,6 +640,9 @@ export default function ContactoPage() {
                       </label>
                       <input
                         type="tel"
+                        name="telefono"
+                        value={formData.telefono}
+                        onChange={handleInputChange}
                         placeholder="+52 000 000 0000"
                         className="w-full rounded-[18px] border border-white/10 bg-white/8 px-4 py-3 text-sm text-[#F7F3EC] placeholder:text-white/45 outline-none transition focus:border-[#D0A52F] focus:ring-2 focus:ring-[#D0A52F]/20"
                       />
@@ -567,7 +656,11 @@ export default function ContactoPage() {
                       </label>
                       <input
                         type="email"
+                        name="correo"
+                        value={formData.correo}
+                        onChange={handleInputChange}
                         placeholder="tucorreo@ejemplo.com"
+                        required
                         className="w-full rounded-[18px] border border-white/10 bg-white/8 px-4 py-3 text-sm text-[#F7F3EC] placeholder:text-white/45 outline-none transition focus:border-[#D0A52F] focus:ring-2 focus:ring-[#D0A52F]/20"
                       />
                     </div>
@@ -576,12 +669,18 @@ export default function ContactoPage() {
                       <label className="mb-2 block text-sm font-medium text-[#F7F3EC]">
                         Motivo de contacto
                       </label>
-                      <select className="w-full rounded-[18px] border border-white/10 bg-white/8 px-4 py-3 text-sm text-[#F7F3EC] outline-none transition focus:border-[#D0A52F] focus:ring-2 focus:ring-[#D0A52F]/20">
-                        <option className="text-[#221B18]">Selecciona una opción</option>
-                        <option className="text-[#221B18]">Información sobre desarrollos</option>
-                        <option className="text-[#221B18]">Consulta sobre servicios</option>
-                        <option className="text-[#221B18]">Agendar atención</option>
-                        <option className="text-[#221B18]">Otro</option>
+                      <select
+                        name="motivo"
+                        value={formData.motivo}
+                        onChange={handleInputChange}
+                        required
+                        className="w-full rounded-[18px] border border-white/10 bg-white/8 px-4 py-3 text-sm text-[#F7F3EC] outline-none transition focus:border-[#D0A52F] focus:ring-2 focus:ring-[#D0A52F]/20"
+                      >
+                        <option value="" className="text-[#221B18]">Selecciona una opción</option>
+                        <option value="Información sobre desarrollos" className="text-[#221B18]">Información sobre desarrollos</option>
+                        <option value="Consulta sobre servicios" className="text-[#221B18]">Consulta sobre servicios</option>
+                        <option value="Agendar atención" className="text-[#221B18]">Agendar atención</option>
+                        <option value="Otro" className="text-[#221B18]">Otro</option>
                       </select>
                     </div>
                   </div>
@@ -591,8 +690,12 @@ export default function ContactoPage() {
                       Mensaje
                     </label>
                     <textarea
+                      name="mensaje"
+                      value={formData.mensaje}
+                      onChange={handleInputChange}
                       rows={6}
                       placeholder="Cuéntanos cómo podemos ayudarte..."
+                      required
                       className="w-full rounded-[20px] border border-white/10 bg-white/8 px-4 py-3 text-sm text-[#F7F3EC] placeholder:text-white/45 outline-none transition focus:border-[#D0A52F] focus:ring-2 focus:ring-[#D0A52F]/20"
                     />
                   </div>
@@ -601,6 +704,10 @@ export default function ContactoPage() {
                     <label className="flex items-start gap-3 rounded-[20px] border border-white/10 bg-black/10 px-4 py-4 text-sm text-[rgba(247,243,236,0.75)]">
                       <input
                         type="checkbox"
+                        name="aceptaContacto"
+                        checked={formData.aceptaContacto}
+                        onChange={handleInputChange}
+                        required
                         className="mt-1 h-4 w-4 rounded border-white/20 text-[#D0A52F] focus:ring-[#D0A52F]/20"
                       />
                       <span>
@@ -611,11 +718,24 @@ export default function ContactoPage() {
 
                     <button
                       type="submit"
+                      disabled={isSubmitting}
                       className="inline-flex items-center justify-center rounded-full bg-[#D0A52F] px-8 py-3.5 text-sm font-semibold text-[#221B18] transition duration-300 hover:-translate-y-0.5 hover:bg-[#C79A2B]"
                     >
-                      Enviar solicitud
+                      {isSubmitting ? "Enviando..." : "Enviar solicitud"}
                     </button>
                   </div>
+
+                  {feedback && (
+                    <p
+                      className={`rounded-[16px] border px-4 py-3 text-sm ${
+                        feedback.type === "success"
+                          ? "border-green-300/60 bg-green-100/15 text-green-200"
+                          : "border-red-300/60 bg-red-100/15 text-red-200"
+                      }`}
+                    >
+                      {feedback.message}
+                    </p>
+                  )}
                 </form>
 
                 <div className="mt-6 rounded-[24px] border border-white/10 bg-black/10 px-5 py-5">
