@@ -29,6 +29,10 @@ Variables requeridas:
 
 - `MONGODB_URI`
 - `JWT_SECRET`
+- `BREVO_API_KEY` (API key de Brevo para correo transaccional)
+- `CONTACT_TO_EMAIL` (correo destino para solicitudes de contacto)
+- `CONTACT_FROM_EMAIL` (remitente verificado en Brevo)
+- `CONTACT_FROM_NAME` (nombre del remitente, por ejemplo `ANRO Web`)
 
 ## Desarrollo local
 
